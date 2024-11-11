@@ -1,0 +1,22 @@
+
+{
+  "[python]": {
+      "editor.defaultFormatter": "ms-python.black-formatter",
+      "editor.formatOnSave": true,
+      "editor.formatOnSaveMode": "file",
+      "editor.formatOnPaste": false,
+      "editor.codeActionsOnSave": {
+          "source.organizeImports": "explicit"
+      },
+  },
+  "python.analysis.typeCheckingMode": "standard",
+  "files.trimFinalNewlines": true,
+  "flake8.args": [
+      "--max-line-length=120",
+      "--ignore=E203, W503"
+  ],
+  "isort.args": [
+      "--profile",
+      "black"
+  ]
+}

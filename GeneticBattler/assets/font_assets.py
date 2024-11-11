@@ -5,7 +5,7 @@ import pygame
 
 class FontAssets:
     pygame.init()
-    pixel_font_path = os.path.join(os.getcwd(), "fonts", "Grand9K Pixel.ttf")
+    pixel_font_path = os.path.join(os.getcwd(), "assets", "fonts", "Grand9K Pixel.ttf")
 
     huge_font = pygame.font.Font(pixel_font_path, 85)
     title_font = pygame.font.Font(pixel_font_path, 40)

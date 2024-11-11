@@ -11,14 +11,14 @@ from game_phases.main_menu import MainMenu
 # PYGAME INITIALIZATION #
 pygame.init()
 pygame.display.set_caption("CytoGenesis")  # window title
-screen_size = (1024, 576)
+windowed_screen_size = (1024, 576)
 
 colors: Colors = Colors()
-screen: Surface = pygame.display.set_mode(screen_size)
+screen: Surface = pygame.display.set_mode(windowed_screen_size)
 clock: Clock = pygame.time.Clock()
 font_assets: FontAssets = FontAssets()
-image_assets: ImageAssets = ImageAssets(screen_size)
-game_state: GameState = GameState(screen_size=screen_size)
+image_assets: ImageAssets = ImageAssets(windowed_screen_size)
+game_state: GameState = GameState(screen_size=windowed_screen_size)
 
 
 main_menu: MainMenu = MainMenu(

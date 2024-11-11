@@ -12,7 +12,7 @@ class ImageAssets:
         # Phase background images
         self.shop_background = pygame.transform.scale(
             pygame.image.load(
-                os.path.join(os.getcwd(), "images", "shop_background.png")
+                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
             ),
             (screen_size[0], screen_size[1]),
         )
@@ -20,7 +20,7 @@ class ImageAssets:
 
         self.colonization_phase_background = pygame.transform.scale(
             pygame.image.load(
-                os.path.join(os.getcwd(), "images", "shop_background.png")
+                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
             ),
             (screen_size[0], screen_size[1]),
         )
@@ -30,7 +30,7 @@ class ImageAssets:
 
         self.point_screen_size_background = pygame.transform.scale(
             pygame.image.load(
-                os.path.join(os.getcwd(), "images", "shop_background.png")
+                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
             ),
             (screen_size[0], screen_size[1]),
         )
@@ -40,10 +40,10 @@ class ImageAssets:
 
         # Reactor body images
         reactor_image_path = os.path.join(
-            os.getcwd(), "images", "reactor_background.png"
+            os.getcwd(), "assets", "images", "reactor_background.png"
         )
-        reactor_liquid_path = os.path.join(os.getcwd(), "images", "liquid")
-        reactor_stirrer_path = os.path.join(os.getcwd(), "images", "stirrer")
+        reactor_liquid_path = os.path.join(os.getcwd(), "assets", "images", "liquid")
+        reactor_stirrer_path = os.path.join(os.getcwd(), "assets", "images", "stirrer")
         reactor_image_factor = 6
         self.reactor_background = pygame.transform.scale(
             pygame.image.load(reactor_image_path),
@@ -76,7 +76,7 @@ class ImageAssets:
         # Shop images
         computer_image_scaling_factor = 800
         temporary_computer_image = pygame.image.load(
-            os.path.join(os.getcwd(), "images", "computer.png")
+            os.path.join(os.getcwd(), "assets", "images", "computer.png")
         )
         self.shop_computer_image = pygame.transform.scale(
             temporary_computer_image,

@@ -249,9 +249,9 @@ class ShopPhase:
                     self.item_rarities_colors[option["rarity"]]
                 ]
             unselected_color = (
-                max(0, highlight_color[0] - 100),
-                max(0, highlight_color[1] - 100),
-                max(0, highlight_color[2] - 100),
+                min(max(0, highlight_color[0] - 65), 255),
+                min(max(0, highlight_color[1] - 65), 255),
+                min(max(0, highlight_color[2] - 65), 255),
             )
             if self.shop_phase_selected_option == i:
                 color = highlight_color

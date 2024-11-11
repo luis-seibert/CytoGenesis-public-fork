@@ -26,7 +26,7 @@ class Cell(pygame.sprite.Sprite):
         )
 
         self.growth = True
-        image_path = os.path.join(os.getcwd(), "images", "COCCUS2.png")
+        image_path = os.path.join(os.getcwd(), "assets", "images", "COCCUS2.png")
         self.image = pygame.image.load(image_path)
         self.rectangle = self.image.get_rect()
         self.rectangle.center = self.center_axial

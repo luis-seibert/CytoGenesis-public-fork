@@ -77,6 +77,8 @@ class MainMenu:
     def run_main_menu(self):
         """Run main menu with several options to choose from"""
 
+        # pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
+
         self.main_menu_hexagons = self.hexagon_grid.main_menu_grid()
 
         while True:

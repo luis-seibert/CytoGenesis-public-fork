@@ -160,14 +160,15 @@ class SettingsMenu:
         global frame_count
 
         # Render background
-        self.screen.blit(
+        """self.screen.blit(
             self.image_assets.colonization_phase_background,
             self.image_assets.colonization_phase_background_rectangle,
-        )
+        )"""
+        self.screen.fill((230, 230, 230))
 
         # Render the title
         title_text = self.font_assets.title_font.render(
-            "Settings", True, self.colors.white
+            "Settings", True, self.colors.black
         )
         title_rect = title_text.get_rect(
             center=(self.screen_size[0] // 2, self.screen_size[1] // 10)
@@ -177,9 +178,9 @@ class SettingsMenu:
         # Render the settings menu options
         for i, option in enumerate(self.menu_options):
             color = (
-                self.colors.white
+                self.colors.orange
                 if i == selected_option and not selected_secondary_option
-                else self.colors.black
+                else self.colors.gray
             )
             option_text = self.font_assets.title_font.render(option, True, color)
             option_rect = option_text.get_rect(
@@ -196,9 +197,9 @@ class SettingsMenu:
 
         for i, option in enumerate(settings_menu_option_values):
             color = (
-                self.colors.white
+                self.colors.orange
                 if i == selected_option and selected_secondary_option
-                else self.colors.black
+                else self.colors.gray
             )
             option_text = self.font_assets.title_font.render(str(option), True, color)
             option_rect = option_text.get_rect(
@@ -212,7 +213,7 @@ class SettingsMenu:
         # Display FPS
         if game_state.show_fps:
             display_fps(
-                self.screen, self.font_assets.small_font, self.clock, self.colors.white
+                self.screen, self.font_assets.small_font, self.clock, self.colors.black
             )
 
         # Update display

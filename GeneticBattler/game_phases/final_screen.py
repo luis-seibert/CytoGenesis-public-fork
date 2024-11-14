@@ -49,14 +49,15 @@ class FinalScreen:
         """Renders overall achieved points"""
 
         # Render background
-        self.screen.blit(
+        """self.screen.blit(
             self.image_assets.colonization_phase_background,
             self.image_assets.colonization_phase_background_rectangle,
-        )
+        )"""
+        self.screen.fill((230, 230, 230))
 
         # Global points text
-        final_screen_text = self.font_assets.medium_font.render(
-            "Total biomass generated:", True, self.colors.white
+        final_screen_text = self.font_assets.title_font.render(
+            "Total biomass generated:", True, self.colors.black
         )
         fin_screen_rectangle = final_screen_text.get_rect(
             center=(self.screen_size[0] // 2, self.screen_size[1] // 3.5)
@@ -64,7 +65,7 @@ class FinalScreen:
         self.screen.blit(final_screen_text, fin_screen_rectangle)
 
         run_points_text = self.font_assets.title_font.render(
-            str(game_state.run_points), True, self.colors.white
+            str(game_state.run_points), True, self.colors.black
         )
         run_points_rectangle = run_points_text.get_rect(
             center=(self.screen_size[0] // 2, self.screen_size[1] // 3 + 50)
@@ -73,7 +74,7 @@ class FinalScreen:
 
         # Enter to continue text
         conti_text = self.font_assets.medium_font.render(
-            "Press Enter to return to main menu!", True, self.colors.white
+            "Press Enter to return to main menu!", True, self.colors.black
         )
         conti_text_rect = conti_text.get_rect(
             center=(self.screen_size[0] // 2, self.screen_size[1] // 1.85)
@@ -83,7 +84,7 @@ class FinalScreen:
         # Display FPS
         if game_state.show_fps:
             display_fps(
-                self.screen, self.font_assets.small_font, self.clock, self.colors.white
+                self.screen, self.font_assets.small_font, self.clock, self.colors.black
             )
 
         # Update display

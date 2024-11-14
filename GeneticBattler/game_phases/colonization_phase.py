@@ -50,6 +50,13 @@ class ColonizationPhase:
         continued = False
         current_points = 0
 
+        # Calculate energy consumption rate
+        current_dNutridt = (
+            game_state.cell_energy_consumption_rate_maximum
+            * 1
+            / (1 + game_state.cell_energy_affinity)
+        ) * 40
+
         while True:
             level_running = False
 
@@ -75,10 +82,7 @@ class ColonizationPhase:
                 cells[cell_key] = hexagons[cell_key].update(cells[cell_key])
                 current_points += cells[cell_key].energy
             current_credits = int(
-                round(
-                    game_state.biomass_price
-                    * (current_points / (game_state.current_level + 1))
-                )
+                round(game_state.biomass_price * (current_points * current_dNutridt))
             )
             current_points = int(round(current_points))
 
@@ -116,10 +120,11 @@ class ColonizationPhase:
         """Renders the hexagons"""
 
         # Render background
-        self.screen.blit(
+        """self.screen.blit(
             self.image_assets.colonization_phase_background,
             self.image_assets.colonization_phase_background_rectangle,
-        )
+        )"""
+        self.screen.fill((230, 230, 230))
 
         # Blit the current reactor image
         self.screen.blit(
@@ -179,12 +184,12 @@ class ColonizationPhase:
         cell_line: dict[tuple[int, int], Cell],
         game_state: GameState,
     ) -> None:
-
-        # Render background
+        """# Render background
         self.screen.blit(
             self.image_assets.colonization_phase_background,
             self.image_assets.colonization_phase_background_rectangle,
-        )
+        )"""
+        self.screen.fill((230, 230, 230))
 
         # Blit the current reactor image
         self.screen.blit(

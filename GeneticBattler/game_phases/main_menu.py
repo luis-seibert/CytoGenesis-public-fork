@@ -1,4 +1,4 @@
-import random
+# import random
 import sys
 
 import pygame
@@ -80,6 +80,14 @@ class MainMenu:
         # pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 
         self.main_menu_hexagons = self.hexagon_grid.main_menu_grid()
+        for coordinate in self.main_menu_hexagons:
+            hexagon_nutrient_color = self.main_menu_hexagons[coordinate].color[
+                self.game_state.default_hexagon_nutrient_color_index
+            ]
+            hexagon_nutrient_color = min(hexagon_nutrient_color + 110, 255)
+            self.main_menu_hexagons[coordinate].color[
+                self.game_state.default_hexagon_nutrient_color_index
+            ] = hexagon_nutrient_color
 
         while True:
             # if self.frame_count >= 100:
@@ -127,7 +135,8 @@ class MainMenu:
 
         # Render background hexagons
         for hexagon in self.main_menu_hexagons.values():
-            if self.frame_count % 5 == 0:  # TODO HOW???
+            """
+            if self.frame_count % 1 == 0:  # TODO HOW???
                 if (
                     hexagon.color[self.game_state.default_hexagon_nutrient_color_index]
                     >= 200
@@ -141,7 +150,7 @@ class MainMenu:
                 if self.oscillation_increase:
                     hexagon.color[
                         self.game_state.default_hexagon_nutrient_color_index
-                    ] += (hexagon.distance_to_center * random.randint(1, 5) * 0.15)
+                    ] += (hexagon.distance_to_center * random.randint(1, 3) * 0.01)
                     hexagon.color[
                         self.game_state.default_hexagon_nutrient_color_index
                     ] = min(
@@ -153,7 +162,7 @@ class MainMenu:
                 else:
                     hexagon.color[
                         self.game_state.default_hexagon_nutrient_color_index
-                    ] -= (hexagon.distance_to_center * random.randint(1, 5) * 0.15)
+                    ] -= (random.randint(1, 3) * 0.01)
                     hexagon.color[
                         self.game_state.default_hexagon_nutrient_color_index
                     ] = max(
@@ -162,6 +171,7 @@ class MainMenu:
                         ],
                         0,
                     )
+            """
 
             hexagon.render(self.screen, self.colors.black)
 

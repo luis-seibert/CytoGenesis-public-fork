@@ -74,16 +74,19 @@ class ImageAssets:
         ]
 
         # Shop images
-        computer_image_scaling_factor = 800
+        computer_image_scaling_factor = 400
         temporary_computer_image = pygame.image.load(
-            os.path.join(os.getcwd(), "assets", "images", "computer.png")
+            os.path.join(os.getcwd(), "assets", "images", "computer2.png")
         )
         self.shop_computer_image = pygame.transform.scale(
             temporary_computer_image,
-            (computer_image_scaling_factor, computer_image_scaling_factor),
+            (
+                computer_image_scaling_factor * 0.95,
+                computer_image_scaling_factor * 1.2,
+            ),
         )
         self.shop_computer_image_rectangle = self.shop_computer_image.get_rect()
         self.shop_computer_image_rectangle.center = (
-            int(round(screen_size[0] // 4)),
-            int(round(screen_size[1] // 1.3)),
+            int(round(screen_size[0] // 5.5)),
+            int(round(screen_size[1] // 1.455)),
         )

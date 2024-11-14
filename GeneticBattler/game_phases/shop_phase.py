@@ -10,7 +10,7 @@ from assets.colors import Colors
 from assets.font_assets import FontAssets
 from assets.image_assets import ImageAssets
 from base_elements.game_state import GameState
-from base_elements.utils import display_fps
+from base_elements.utils import calculate_frame_delay, display_fps
 
 
 class ShopPhase:
@@ -207,7 +207,33 @@ class ShopPhase:
         #    self.image_assets.shop_background,
         #    self.image_assets.shop_background_rectangle,
         # )
-        self.screen.fill((230, 230, 230))
+        self.screen.fill((255, 255, 255))
+
+        # Blit the current reactor image
+        self.screen.blit(
+            self.image_assets.reactor_background,
+            self.image_assets.reactor_background_rectangle,
+        )
+        reactor_stirrer_image_counter = calculate_frame_delay(
+            self.frame_count,
+            game_state.fps_maximum,
+            game_state.fps_maximum // 4,
+            len(self.image_assets.reactor_stirrer_images),
+        )
+        self.screen.blit(
+            self.image_assets.reactor_stirrer_images[reactor_stirrer_image_counter],
+            self.image_assets.reactor_background_rectangle,
+        )
+        reactor_liquid_image_counter = calculate_frame_delay(
+            self.frame_count,
+            game_state.fps_maximum,
+            game_state.fps_maximum // 8,
+            len(self.image_assets.reactor_liquid_images),
+        )
+        self.screen.blit(
+            self.image_assets.reactor_liquid_images[reactor_liquid_image_counter],
+            self.image_assets.reactor_background_rectangle,
+        )
 
         # Render statistics computer background
         self.screen.blit(
@@ -220,12 +246,26 @@ class ShopPhase:
             "Welcome to the lab - prepare for your next cultivation!",
             True,
             self.colors.black,
+            self.colors.white,
         )
         title_rectangle = title_text.get_rect(
             center=(self.screen_size[0] // 2, self.screen_size[1] // 10)
         )
 
         self.screen.blit(title_text, title_rectangle)
+
+        # Credits calculation info
+        info_text = self.font_assets.small_font.render(
+            "Credits = Biomass price * Growth rate",
+            True,
+            self.colors.black,
+            self.colors.white,
+        )
+        info_rectangle = info_text.get_rect(
+            center=(self.screen_size[0] // 1.23, self.screen_size[1] // 5.5)
+        )
+
+        self.screen.blit(info_text, info_rectangle)
 
         # Render current credits
         credits_text = self.font_assets.large_font.render(
@@ -264,7 +304,7 @@ class ShopPhase:
                     option["name"], True, color
                 )
             else:
-                option_text = self.font_assets.medium_font.render(
+                option_text = self.font_assets.medium_small_font.render(
                     option["name"] + f" [{str(option['price'])}]",
                     True,
                     color,
@@ -303,7 +343,7 @@ class ShopPhase:
             )
             option_rect = option_text.get_rect(
                 topleft=(
-                    self.screen_size[0] // 15,
+                    self.screen_size[0] // 28,
                     self.screen_size[1] // 3 + i * 30,
                 )
             )

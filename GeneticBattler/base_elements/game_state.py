@@ -3,6 +3,10 @@ class GameState:
         self,
         screen_size: tuple[int, int],
     ):
+        # Screen settings
+        self.default_windowed_screen_size: tuple[int, int] = (1024, 576)
+        self.full_screen = True
+
         # Variables that are specific to each game run
         self.default_number_levels: int = 8  # number of levels in one run
 

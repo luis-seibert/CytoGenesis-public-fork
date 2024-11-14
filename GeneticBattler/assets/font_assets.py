@@ -11,4 +11,5 @@ class FontAssets:
     title_font = pygame.font.Font(pixel_font_path, 40)
     large_font = pygame.font.Font(pixel_font_path, 32)
     medium_font = pygame.font.Font(pixel_font_path, 25)
+    medium_small_font = pygame.font.Font(pixel_font_path, 20)
     small_font = pygame.font.Font(pixel_font_path, 16)

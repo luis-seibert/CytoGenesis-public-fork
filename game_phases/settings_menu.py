@@ -62,18 +62,20 @@ class SettingsMenu:
                 if self.secondary_option_selected:
                     if self.selected_option == 0:  # Number of levels
                         game_state.default_number_levels = (
-                            event_handler.handle_change_number_option_with_return(
+                            event_handler.handle_change_option_value_with_circling(
                                 event,
                                 game_state.default_number_levels,
                                 game_state.max_number_levels,
+                                1,  # At least one level is required
                             )
                         )
                     elif self.selected_option == 1:  # Number of initial cells
                         game_state.default_number_cells = (
-                            event_handler.handle_change_number_option_with_return(
+                            event_handler.handle_change_option_value_with_circling(
                                 event,
                                 game_state.default_number_cells,
                                 game_state.max_number_initial_cells,
+                                1,  # At least one cell is required
                             )
                         )
                     elif self.selected_option == 2:  # Show fps
@@ -81,7 +83,7 @@ class SettingsMenu:
                             event, game_state.show_fps
                         )
                 else:
-                    self.selected_option = event_handler.handle_up_down_navigation(
+                    self.selected_option = event_handler.handle_option_navigation(
                         event, self.selected_option, len(self.menu_options)
                     )
                     if event_handler.handle_escape(event):

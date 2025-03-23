@@ -168,7 +168,7 @@ class ShopPhase:
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
 
-                self.selected_option = event_handler.handle_up_down_navigation(
+                self.selected_option = event_handler.handle_option_navigation(
                     event,
                     self.selected_option,
                     len(self.options_list),

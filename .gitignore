@@ -16,3 +16,6 @@
 
 # venvs
 .venv/
+
+# Pycache in all subdirectories
+**/__pycache__/

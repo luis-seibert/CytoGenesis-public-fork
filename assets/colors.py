@@ -1,4 +1,6 @@
 class Colors:
+    """Color constants for the game."""
+
     white: tuple[int, int, int] = (255, 255, 255)
     black: tuple[int, int, int] = (0, 0, 0)
     gray: tuple[int, int, int] = (100, 100, 100)

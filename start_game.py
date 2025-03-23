@@ -8,27 +8,32 @@ from assets.image_assets import ImageAssets
 from base_elements.game_state import GameState
 from game_phases.main_menu import MainMenu
 
-# PYGAME INITIALIZATION #
-pygame.init()
-pygame.display.set_caption("CytoGenesis")  # window title
-windowed_screen_size = (1024, 576)
 
-colors: Colors = Colors()
-screen: Surface = pygame.display.set_mode(windowed_screen_size)
-clock: Clock = pygame.time.Clock()
-font_assets: FontAssets = FontAssets()
-image_assets: ImageAssets = ImageAssets(windowed_screen_size)
-game_state: GameState = GameState(screen_size=windowed_screen_size)
+def run_game() -> None:
+    """Main game loop that initializes Pygame and runs the game."""
+
+    pygame.init()
+    pygame.display.set_caption("CytoGenesis")
+    windowed_screen_size = (1024, 576)
+
+    colors: Colors = Colors()
+    screen: Surface = pygame.display.set_mode(windowed_screen_size)
+    clock: Clock = pygame.time.Clock()
+    font_assets: FontAssets = FontAssets()
+    image_assets: ImageAssets = ImageAssets(windowed_screen_size)
+    game_state: GameState = GameState(screen_size=windowed_screen_size)
+
+    main_menu: MainMenu = MainMenu(
+        screen,
+        clock,
+        font_assets,
+        image_assets,
+        game_state,
+        colors,
+    )
+
+    main_menu.run_main_menu()
 
 
-main_menu: MainMenu = MainMenu(
-    screen,
-    clock,
-    font_assets,
-    image_assets,
-    game_state,
-    colors,
-)
-
-
-main_menu.run_main_menu()
+if __name__ == "__main__":
+    run_game()

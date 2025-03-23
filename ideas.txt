@@ -58,3 +58,9 @@
 # FAR FUTURE:
 # implement background music
 # fine-tune text positions
+
+
+
+
+# Unlabeled # TODO order into category
+- level final screen, first show earned biomass, then calculate how much credits are earned

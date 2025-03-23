@@ -40,6 +40,10 @@ class GameState:
         self.default_biomass_price: float = 1
         self.default_credits: int = 0
 
+        # Settings
+        self.max_number_levels: int = 10
+        self.max_number_initial_cells: int = 10
+
         self.reset()
 
     def reset(self):

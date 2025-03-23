@@ -11,6 +11,7 @@ from assets.font_assets import FontAssets
 from assets.image_assets import ImageAssets
 from base_elements.game_state import GameState
 from base_elements.utils import calculate_frame_delay, display_fps
+from utils import event_handler
 
 
 class ShopPhase:
@@ -30,7 +31,8 @@ class ShopPhase:
         self.screen_size: tuple[int, int] = screen.get_size()
 
         self.frame_count: int = 0
-        self.shop_phase_selected_option: int = 0
+        self.selected_option: int = 0
+        self.options_list: list[dict[str, Any]] = [{"name": "Start batch"}]
 
         self.number_item_rarities = 5
         self.item_rarities_colors: list[str] = [
@@ -127,76 +129,61 @@ class ShopPhase:
     def run_shop_phase(self, game_state: GameState) -> GameState:
         """Shop phase to modify conditions for next iteration of the colonization phase"""
 
-        self.shop_phase_options: list[dict[str, Any]] = [{"name": "Start batch"}]
-        self.shop_phase_options += self.random_items(
+        def _buy_item(item: dict[str, Any], game_state: GameState) -> GameState:
+            """Buy item and modify game state"""
+
+            game_state.current_credits -= item["price"]
+            variable_value = getattr(game_state, item["variable_name"])
+            self.options_list.remove(item)
+            self.selected_option = 0
+
+            if item["modification_type"] == "increase":
+                if variable_value + item["modification_value"] > item["maximum_value"]:
+                    new_variable_value = item["maximum_value"]
+                else:
+                    new_variable_value = variable_value + item["modification_value"]
+                setattr(
+                    game_state,
+                    item["variable_name"],
+                    new_variable_value,
+                )
+            elif item["modification_type"] == "decrease":
+                if variable_value - item["modification_value"] < item["minimum_value"]:
+                    new_variable_value = item["minimum_value"]
+                else:
+                    new_variable_value = variable_value - item["modification_value"]
+                setattr(
+                    game_state,
+                    item["variable_name"],
+                    new_variable_value,
+                )
+
+            return game_state
+
+        self.options_list += self.random_items(
             game_state.default_number_shop_items, game_state
         )
 
         while True:
-            # Event handling
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                event_handler.handle_quit(event)
 
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        self.shop_phase_selected_option = (
-                            self.shop_phase_selected_option - 1
-                        ) % len(self.shop_phase_options)
-                    elif event.key == pygame.K_DOWN:
-                        self.shop_phase_selected_option = (
-                            self.shop_phase_selected_option + 1
-                        ) % len(self.shop_phase_options)
-                    elif event.key == pygame.K_RETURN:
-                        if self.shop_phase_selected_option == 0:  # Continue the game
-                            return game_state
-                        else:  # Buy item
-                            item = self.shop_phase_options[
-                                self.shop_phase_selected_option
-                            ]
-                            if item["price"] > game_state.current_credits:
-                                break
+                self.selected_option = event_handler.handle_up_down_navigation(
+                    event,
+                    self.selected_option,
+                    len(self.options_list),
+                )
 
-                            game_state.current_credits -= item["price"]
-                            variable_value = getattr(game_state, item["variable_name"])
-                            self.shop_phase_options.remove(item)
-                            self.shop_phase_selected_option = 0
+                if event_handler.handle_option_selection(event):
+                    if self.selected_option == 0:  # Start level
+                        return game_state
 
-                            if item["modification_type"] == "increase":
-                                if (
-                                    variable_value + item["modification_value"]
-                                    > item["maximum_value"]
-                                ):
-                                    new_variable_value = item["maximum_value"]
-                                else:
-                                    new_variable_value = (
-                                        variable_value + item["modification_value"]
-                                    )
-                                setattr(
-                                    game_state,
-                                    item["variable_name"],
-                                    new_variable_value,
-                                )
-                            if item["modification_type"] == "decrease":
-                                if (
-                                    variable_value - item["modification_value"]
-                                    < item["minimum_value"]
-                                ):
-                                    new_variable_value = item["minimum_value"]
-                                else:
-                                    new_variable_value = (
-                                        variable_value - item["modification_value"]
-                                    )
-                                setattr(
-                                    game_state,
-                                    item["variable_name"],
-                                    new_variable_value,
-                                )
+                    item = self.options_list[self.selected_option]  # Item selected
+                    if item["price"] > game_state.current_credits:
+                        break  # Not enough credits to buy item
 
-                            self.render_shop_phase(game_state)
+                    game_state = _buy_item(item, game_state)
 
-            # Render the shop
             self.render_shop_phase(game_state)
 
     def render_shop_phase(self, game_state: GameState):
@@ -279,7 +266,7 @@ class ShopPhase:
         self.screen.blit(credits_text, credits_rectangle)
 
         # Render the shop options
-        for i, option in enumerate(self.shop_phase_options):
+        for i, option in enumerate(self.options_list):
             # Define colors
 
             if option["name"] == "Start batch":
@@ -293,7 +280,7 @@ class ShopPhase:
                 min(max(0, highlight_color[1] - 65), 255),
                 min(max(0, highlight_color[2] - 65), 255),
             )
-            if self.shop_phase_selected_option == i:
+            if self.selected_option == i:
                 color = highlight_color
             else:
                 color = unselected_color

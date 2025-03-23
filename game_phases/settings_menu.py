@@ -8,7 +8,9 @@ from assets.colors import Colors
 from assets.font_assets import FontAssets
 from assets.image_assets import ImageAssets
 from base_elements.game_state import GameState
+from base_elements.hexagon_grid import HexagonGrid
 from base_elements.utils import display_fps
+from utils import event_handler
 
 
 class SettingsMenu:
@@ -36,135 +38,90 @@ class SettingsMenu:
             "Show FPS",
         ]
         self.selected_option: int = 0
-        self.selected_secondary_option: bool = False
+        self.secondary_option_selected: bool = False
 
     def run_settings_menu(self, game_state: GameState) -> GameState:
+        """Runs the settings menu."""
+
+        # Create hexagon grid for settings menu
+        hexagon_grid = HexagonGrid(game_state, self.screen)
+        self.settings_menu_hexagons = hexagon_grid.main_menu_grid()
+        for coordinate in self.settings_menu_hexagons:
+            hexagon_nutrient_color = self.settings_menu_hexagons[coordinate].color[
+                game_state.default_hexagon_nutrient_color_index
+            ]
+            hexagon_nutrient_color = min(hexagon_nutrient_color + 110, 255)
+            self.settings_menu_hexagons[coordinate].color[
+                game_state.default_hexagon_nutrient_color_index
+            ] = hexagon_nutrient_color
+
         while True:
-            # Event handling
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                event_handler.handle_quit(event)
 
-                # Enter value setting if key is pressed in settings menu
-                elif event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        self.selected_option = (self.selected_option - 1) % len(
-                            self.menu_options
+                if self.secondary_option_selected:
+                    if self.selected_option == 0:  # Number of levels
+                        game_state.default_number_levels = (
+                            event_handler.handle_change_number_option_with_return(
+                                event,
+                                game_state.default_number_levels,
+                                game_state.max_number_levels,
+                            )
                         )
-                    elif event.key == pygame.K_DOWN:
-                        self.selected_option = (self.selected_option + 1) % len(
-                            self.menu_options
+                    elif self.selected_option == 1:  # Number of initial cells
+                        game_state.default_number_cells = (
+                            event_handler.handle_change_number_option_with_return(
+                                event,
+                                game_state.default_number_cells,
+                                game_state.max_number_initial_cells,
+                            )
                         )
-                    elif event.key == pygame.K_RETURN:
-                        secondary_option_selected = True
-                        self.render_settings(
-                            game_state, self.selected_option, secondary_option_selected
+                    elif self.selected_option == 2:  # Show fps
+                        game_state.show_fps = event_handler.handle_change_bool_option(
+                            event, game_state.show_fps
                         )
-
-                        if self.selected_option == 0:  # Number of levels
-                            while True:
-                                for secondary_event in pygame.event.get():
-                                    if secondary_event.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-
-                                    if secondary_event.type == pygame.KEYDOWN:
-                                        if secondary_event.key == pygame.K_UP:
-                                            game_state.default_number_levels += 1
-                                        elif secondary_event.key == pygame.K_DOWN:
-                                            if game_state.default_number_levels > 1:
-                                                game_state.default_number_levels -= 1
-                                        elif secondary_event.key == pygame.K_ESCAPE:
-                                            secondary_option_selected = False
-                                            self.run_settings_menu(game_state)
-                                            return game_state
-
-                                        # Re-Render settings screen immediately with the current values
-                                        self.render_settings(
-                                            game_state,
-                                            self.selected_option,
-                                            secondary_option_selected,
-                                        )
-
-                        elif self.selected_option == 1:  # Number of initial cells
-                            while True:
-                                for secondary_event in pygame.event.get():
-                                    if secondary_event.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-
-                                    if secondary_event.type == pygame.KEYDOWN:
-                                        if secondary_event.key == pygame.K_UP:
-                                            game_state.default_number_cells += 1
-                                        elif secondary_event.key == pygame.K_DOWN:
-                                            if game_state.default_number_cells > 0:
-                                                game_state.default_number_cells -= 1
-                                        elif secondary_event.key == pygame.K_ESCAPE:
-                                            secondary_option_selected = False
-                                            self.run_settings_menu(game_state)
-                                            return game_state
-
-                                        # Re-Render settings screen immediately with the current values
-                                        self.render_settings(
-                                            game_state,
-                                            self.selected_option,
-                                            secondary_option_selected,
-                                        )
-
-                        elif self.selected_option == 2:  # Show fps
-                            while True:
-                                for secondary_event in pygame.event.get():
-                                    if secondary_event.type == pygame.QUIT:
-                                        pygame.quit()
-                                        sys.exit()
-
-                                    if secondary_event.type == pygame.KEYDOWN:
-                                        if secondary_event.key == pygame.K_UP:
-                                            game_state.show_fps = (
-                                                not game_state.show_fps
-                                            )
-                                        elif secondary_event.key == pygame.K_DOWN:
-                                            if game_state.default_number_cells > 0:
-                                                game_state.show_fps = (
-                                                    not game_state.show_fps
-                                                )
-                                        elif secondary_event.key == pygame.K_ESCAPE:
-                                            secondary_option_selected = False
-                                            self.run_settings_menu(game_state)
-                                            return game_state
-
-                                        # Re-Render settings screen immediately with the current values
-                                        self.render_settings(
-                                            game_state,
-                                            self.selected_option,
-                                            secondary_option_selected,
-                                        )
-
-                    elif event.key == pygame.K_ESCAPE:
+                else:
+                    self.selected_option = event_handler.handle_up_down_navigation(
+                        event, self.selected_option, len(self.menu_options)
+                    )
+                    if event_handler.handle_escape(event):
                         return game_state
 
-            # Render settings screen
+                self.secondary_option_selected = (
+                    event_handler.handle_secondary_option_selection(
+                        event, self.secondary_option_selected
+                    )
+                )
+
             self.render_settings(
-                game_state, self.selected_option, self.selected_secondary_option
+                game_state, self.selected_option, self.secondary_option_selected
             )
 
     def render_settings(
         self,
         game_state: GameState,
         selected_option: int,
-        selected_secondary_option: bool,
+        secondary_option_selected: bool,
     ):
         """Renders the options menu"""
 
         global frame_count
 
         # Render background
-        """self.screen.blit(
+        self.screen.blit(
             self.image_assets.colonization_phase_background,
             self.image_assets.colonization_phase_background_rectangle,
-        )"""
-        self.screen.fill((230, 230, 230))
+        )
+
+        # Render background hexagons
+        for hexagon in self.settings_menu_hexagons.values():
+            hexagon.render(self.screen, self.colors.black)
+
+        # Shade overlay
+        game_over_screen_fade = pygame.Surface(self.screen.get_size())
+        game_over_screen_fade.fill((0, 0, 0))
+        game_over_screen_fade.set_alpha(60)
+        self.screen.blit(game_over_screen_fade, (0, 0))
 
         # Render the title
         title_text = self.font_assets.title_font.render(
@@ -179,7 +136,7 @@ class SettingsMenu:
         for i, option in enumerate(self.menu_options):
             color = (
                 self.colors.orange
-                if i == selected_option and not selected_secondary_option
+                if i == selected_option and not secondary_option_selected
                 else self.colors.gray
             )
             option_text = self.font_assets.title_font.render(option, True, color)
@@ -198,7 +155,7 @@ class SettingsMenu:
         for i, option in enumerate(settings_menu_option_values):
             color = (
                 self.colors.orange
-                if i == selected_option and selected_secondary_option
+                if i == selected_option and secondary_option_selected
                 else self.colors.gray
             )
             option_text = self.font_assets.title_font.render(str(option), True, color)
@@ -221,6 +178,4 @@ class SettingsMenu:
 
         # Cap frame rate
         self.clock.tick(game_state.fps_maximum)
-
-        # Increment the frame count
-        # frame_count += 1
+        # self.frame_count += 1

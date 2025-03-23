@@ -15,9 +15,12 @@ from game_phases.colonization_phase import ColonizationPhase
 from game_phases.final_screen import FinalScreen
 from game_phases.settings_menu import SettingsMenu
 from game_phases.shop_phase import ShopPhase
+from utils import event_handler
 
 
 class MainMenu:
+    """Main menu class that handles the main menu of the game."""
+
     def __init__(
         self,
         screen: Surface,
@@ -74,8 +77,8 @@ class MainMenu:
         self.hexagon_grid = HexagonGrid(self.game_state, self.screen)
         self.frame_count = 0
 
-    def run_main_menu(self):
-        """Run main menu with several options to choose from"""
+    def run_main_menu(self) -> None:
+        """Run main menu with options to choose from."""
 
         # pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 
@@ -90,42 +93,29 @@ class MainMenu:
             ] = hexagon_nutrient_color
 
         while True:
-            # if self.frame_count >= 100:
-            #    self.frame_count = 0
             for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    sys.exit()
+                event_handler.handle_quit(event)
 
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_UP:
-                        self.selected_option = (self.selected_option - 1) % len(
-                            self.menu_options
-                        )
-                    elif event.key == pygame.K_DOWN:
-                        self.selected_option = (self.selected_option + 1) % len(
-                            self.menu_options
-                        )
-                    elif event.key == pygame.K_RETURN:
-                        if self.selected_option == 0:
-                            # Start the game
-                            self.start_game()
-                            self.run_main_menu()
-                        elif self.selected_option == 1:
-                            # Open settings menu
-                            self.game_state = self.settings_menu.run_settings_menu(
-                                self.game_state
-                            )
-                        elif self.selected_option == 2:
-                            # Quit the game
-                            pygame.quit()
-                            sys.exit()
+                self.selected_option = event_handler.handle_up_down_navigation(
+                    event, self.selected_option, len(self.menu_options)
+                )
 
-            # Render the main menu
+                if event_handler.handle_option_selection(event):
+                    if self.selected_option == 0:  # Start game
+                        self.start_game()
+                        self.run_main_menu()
+                    elif self.selected_option == 1:  # Settings menu
+                        self.game_state = self.settings_menu.run_settings_menu(
+                            self.game_state
+                        )
+                    elif self.selected_option == 2:  # Quit game
+                        pygame.quit()
+                        sys.exit()
+
             self.render_main_menu()
 
-    def render_main_menu(self):
-        """Render main menu"""
+    def render_main_menu(self) -> None:
+        """Render main menu."""
 
         # Render background
         self.screen.blit(
@@ -215,11 +205,11 @@ class MainMenu:
 
         # Cap frame rate
         self.clock.tick(self.game_state.fps_maximum)
-
-        # Increment the frame count
         self.frame_count += 1
 
     def start_game(self):
+        """Start the game."""
+
         self.game_state.reset()
 
         # Main game loop

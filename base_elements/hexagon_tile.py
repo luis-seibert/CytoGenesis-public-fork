@@ -1,120 +1,108 @@
 import math
 
-import pygame
-from pygame import Surface
-
 from base_elements.cell import Cell
-from base_elements.utils import calculate_pixel_from_axial
+from base_elements.simulator import update_nutrient_value
 
 
 class HexagonTile:
+    """Flat top hexagon class."""
 
     def __init__(
         self,
-        screen: Surface,
-        minimal_radius: int,
         coordinate_axial: tuple[int, int],
-        distance_to_center: float,
-        color: list[int],
-        nutrient: float,
-        cell_on_hexagon: None | Cell = None,
+        vertices: list[tuple[float, float]],
+        nutrient_value: float,
+        default_body_color: list[int],
+        highlight_ticks: int = 0,
     ) -> None:
-        """Flat top hexagon class"""
+        self.coordinate_axial = coordinate_axial
+        self.vertices = vertices
+        self.nutrient_value = nutrient_value
+        self.highlight_ticks = highlight_ticks
 
-        screen_size: tuple[int, int] = screen.get_size()
-        screen_width_center = int(round(screen_size[0] / 2))
-        screen_height_center = int(round(screen_size[1] / 2))
-
-        self.screen_center: tuple[int, int] = (
-            screen_width_center,
-            screen_height_center,
-        )
-        self.minimal_radius: int = minimal_radius
-        self.maximal_radius: float = self.compute_maximum_radius()
-        self.coordinate_axial: tuple[int, int] = coordinate_axial
-        self.color: list[int | float] = list(color)
-        self.relative_nutrient: float = nutrient
-        self.cell_on_hexagon: None | Cell = cell_on_hexagon
-        self.distance_to_center: float = distance_to_center
-
-        self.highlight_offset: int = 2
-        self.max_highlight_ticks: int = 15
-        self.relative_nutrient_color_index: int = 1
-
-        self.vertices: list[tuple[float, float]] = self.compute_vertices()
-        self.highlight_tick: int = 0
-        self.highlight: bool = False  # Flag for cell replication on this tile
+        self.body_color = default_body_color.copy()
+        self._update_body_color()
 
     def update(self, cell: Cell) -> Cell:
-        """Updates tile visuals and cell growth"""
-        # qS = qS max * S/(S+Ks)
+        """Updates the nutrient value of the hexagon with mass preservation.
 
-        if self.highlight_tick > 0:
-            self.highlight_tick -= 1
+        Args:
+            cell (Cell): The cell on the hexagon.
 
-        if cell.growth and not math.isclose(self.relative_nutrient, 0, abs_tol=0.005):
-            dNutridt = (
-                cell.game_state.cell_energy_consumption_rate_maximum
-                * self.relative_nutrient
-                / (self.relative_nutrient + cell.game_state.cell_energy_affinity)
-            )
+        Returns:
+            Cell: The updated cell.
+        """
 
-            lower = min(dNutridt, self.relative_nutrient)
-            upper = min(lower, cell.game_state.cell_division_threshold)
-            dNutridt = upper
-            self.relative_nutrient -= dNutridt
-            self.color[self.relative_nutrient_color_index] = int(
-                round(self.relative_nutrient * 255, 0)
-            )
+        self.nutrient_value, cell.energy_value, cell.growth = update_nutrient_value(
+            nutrient_value=self.nutrient_value,
+            energy_value=cell.energy_value,
+            growth=cell.growth,
+            energy_consumption_rate_maximum=cell.energy_consumption_rate_maximum,
+            energy_affinity=cell.energy_affinity,
+            division_threshold=cell.division_threshold,
+        )
 
-            cell.energy += dNutridt
-
-        else:
-            cell.growth = False
+        self._update_highlight_ticks()
+        self._update_body_color()
 
         return cell
 
-    def compute_maximum_radius(self) -> float:
-        """Returns max radius of the hexagon"""
+    def set_highlight(self, highlight_ticks: int = 15) -> None:
+        """Sets the highlight ticks of the hexagon.
 
-        return self.minimal_radius / (math.sqrt(3) / 2)
+        Args:
+            highlight_ticks (int): The number of ticks to highlight the hexagon. Defaults to 15.
 
-    def compute_vertices(self) -> list[tuple[float, float]]:
-        """Returns a list of the hexagon's vertices as x, y tuples"""
+        """
 
-        x_pix, y_pix = calculate_pixel_from_axial(
-            self.screen_center, self.minimal_radius, self.coordinate_axial
-        )
+        self.highlight_ticks = highlight_ticks
 
-        vertices = []
-        for i in range(6):
-            angle = math.radians(30 + 60 * i)  # 60 degrees increments
-            x = x_pix + self.maximal_radius * math.cos(angle)
-            y = y_pix + self.maximal_radius * math.sin(angle)
-            vertices.append((x, y))
+    def old_update_nutrient_value(self, cell: Cell) -> Cell:
+        """Updates the nutrient value of the hexagon with mass preservation.
 
-        return vertices
+        The nutrient value is updated based on the cell's energy consumption rate and nutrient
+        affinity with the Monod equation. The cell absorbs only as much nutrient as needed
+        without exceeding the division threshold.
 
-    def render(self, screen: Surface, border_colour) -> None:
-        """Renders the hexagon on the screen"""
+        Args:
+            cell (Cell): The cell on the hexagon.
 
-        color = tuple([int(round(val)) for val in self.color])
-        pygame.draw.polygon(screen, color, self.vertices)
-        pygame.draw.aalines(screen, border_colour, closed=True, points=self.vertices)
+        Returns:
+            Cell: The updated cell.
+        """
 
-    def render_highlight(self, screen: Surface, border_colour) -> None:
-        """Draws a border around the hexagon with the specified colour"""
+        if cell.growth and self.nutrient_value > 0:
+            # Monod equation-based uptake
+            nutrient_uptake = (
+                cell.energy_consumption_rate_maximum
+                * self.nutrient_value
+                / (self.nutrient_value + cell.energy_affinity)
+            )
 
-        self.highlight_tick = self.max_highlight_ticks
-        pygame.draw.polygon(screen, self.highlight_colour(), self.vertices)
-        pygame.draw.aalines(screen, border_colour, closed=True, points=self.vertices)
+            # Cap uptake to what is actually available
+            nutrient_uptake = min(nutrient_uptake, self.nutrient_value)
 
-    def highlight_colour(self) -> list[int]:
-        """Colour of the hexagon tile when rendering highlight"""
+            # Cap uptake so cell does not exceed division threshold
+            max_possible_uptake = cell.division_threshold - cell.energy_value
+            nutrient_uptake = min(nutrient_uptake, max_possible_uptake)
 
-        offset = self.highlight_offset * self.highlight_tick
+            # Update values
+            self.nutrient_value -= nutrient_uptake
+            cell.energy_value += nutrient_uptake
 
-        return list(self._brighten(x, offset) for x in self.color)
+            if math.isclose(self.nutrient_value, 0, abs_tol=0.005):
+                self.nutrient_value = 0
+                cell.growth = False
 
-    def _brighten(self, x: int | float, y: int | float) -> int:
-        return int(round(x + y, 0)) if x + y < 255 else 255
+        return cell
+
+    def _update_body_color(self) -> None:
+        """Updates the body color of the hexagon."""
+
+        self.body_color[1] = round(self.nutrient_value * 255)
+
+    def _update_highlight_ticks(self) -> None:
+        """Updates the highlight ticks of the hexagon."""
+
+        if self.highlight_ticks > 0:
+            self.highlight_ticks -= 1

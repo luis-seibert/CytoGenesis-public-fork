@@ -1,168 +1,50 @@
+import os
 import random
-import sys
 from typing import Any
 
 import pygame
-from pygame import Surface
 from pygame.time import Clock
 
-from assets.colors import Colors
-from assets.font_assets import FontAssets
-from assets.image_assets import ImageAssets
+from base_elements import event_handler
 from base_elements.game_state import GameState
-from base_elements.utils import calculate_frame_delay, display_fps
-from utils import event_handler
+from base_elements.render_manager import RenderManager
+from base_elements.utils import get_config_from_yaml
 
 
 class ShopPhase:
+    """Shop phase class that manages the shop phase of the game."""
+
     def __init__(
         self,
-        screen: Surface,
         clock: Clock,
-        font_assets: FontAssets,
-        image_assets: ImageAssets,
-        colors: Colors,
+        render_manager: RenderManager,
     ) -> None:
-        self.screen: Surface = screen
-        self.clock: Clock = clock
-        self.image_assets: ImageAssets = image_assets
-        self.font_assets: FontAssets = font_assets
-        self.colors: Colors = colors
-        self.screen_size: tuple[int, int] = screen.get_size()
+        self.clock = clock
+        self.render_manager = render_manager
 
-        self.frame_count: int = 0
-        self.selected_option: int = 0
-        self.options_list: list[dict[str, Any]] = [{"name": "Start batch"}]
-
-        self.number_item_rarities = 5
-        self.item_rarities_colors: list[str] = [
-            key for key in self.colors.item_rarity_colors.keys()
-        ]
-        self.item_rarities_indices: list[int] = [
-            index for index in range(self.number_item_rarities)
-        ]
-
-        self.item_stats: list[dict[str, Any]] = [
-            {
-                "variable_name": "hexagon_nutrient_richness",
-                "name": "Substrate richness",
-                "modification_type": "increase",
-                "default_modification_value": 0.01,
-                "minimum_value": 0,
-                "maximum_value": 1,
-                "default_price": 40,
-            },
-            {
-                "variable_name": "number_cells",
-                "name": "Cell Inoculum size",
-                "modification_type": "increase",
-                "default_modification_value": 1,
-                "minimum_value": 1,
-                "maximum_value": 5,
-                "default_price": 24,
-            },
-            {
-                "variable_name": "hexagon_nutrient_varation",
-                "name": "Reactor inhomogeneity",
-                "modification_type": "decrease",
-                "default_modification_value": 0.01,
-                "minimum_value": 0,
-                "maximum_value": 1,
-                "default_price": 30,
-            },
-            {
-                "variable_name": "cell_energy_affinity",
-                "name": "Cell nutrient affinity",
-                "modification_type": "increase",
-                "default_modification_value": 0.001,
-                "minimum_value": 0.001,
-                "maximum_value": 0.1,
-                "default_price": 16,
-            },
-            {
-                "variable_name": "cell_division_threshold",
-                "name": "Cell division threshold",
-                "modification_type": "decrease",
-                "default_modification_value": 0.1,
-                "minimum_value": 0.1,
-                "maximum_value": 1,
-                "default_price": 25,
-            },
-            {
-                "variable_name": "cell_energy_initial",
-                "name": "Cell initial energy",
-                "modification_type": "increase",
-                "default_modification_value": 0.05,
-                "minimum_value": 0.1,
-                "maximum_value": 1,
-                "default_price": 23,
-            },
-            {
-                "variable_name": "cell_energy_variation",
-                "name": "Cell energy variation",
-                "modification_type": "decrease",
-                "default_modification_value": 0.05,
-                "minimum_value": 0,
-                "maximum_value": 1,
-                "default_price": 7,
-            },
-            {
-                "variable_name": "cell_energy_consumption_rate_maximum",
-                "name": "Cell consumption rate",
-                "modification_type": "increase",
-                "default_modification_value": 0.0025,
-                "minimum_value": 0.01,
-                "maximum_value": 0.2,
-                "default_price": 32,
-            },
-            {
-                "variable_name": "biomass_price",
-                "name": "Biomass selling price",
-                "modification_type": "increase",
-                "default_modification_value": 0.15,
-                "minimum_value": 1,
-                "maximum_value": 3,
-                "default_price": 48,
-            },
-        ]
+        self.selected_option = 0
+        self.item_rarity_indices: list[int] = list(range(5))
+        self.item_stats: list[dict[str, Any]] = get_config_from_yaml(
+            os.path.join(os.getcwd(), "assets", "shop_items.yaml")
+        )
 
     def run_shop_phase(self, game_state: GameState) -> GameState:
-        """Shop phase to modify conditions for next iteration of the colonization phase"""
+        """Shop phase to modify conditions for next iteration of the colonization phase.
 
-        def _buy_item(item: dict[str, Any], game_state: GameState) -> GameState:
-            """Buy item and modify game state"""
+        Args:
+            game_state (GameState): Game state object.
 
-            game_state.current_credits -= item["price"]
-            variable_value = getattr(game_state, item["variable_name"])
-            self.options_list.remove(item)
-            self.selected_option = 0
+        Returns:
+            GameState: Updated game state.
+        """
 
-            if item["modification_type"] == "increase":
-                if variable_value + item["modification_value"] > item["maximum_value"]:
-                    new_variable_value = item["maximum_value"]
-                else:
-                    new_variable_value = variable_value + item["modification_value"]
-                setattr(
-                    game_state,
-                    item["variable_name"],
-                    new_variable_value,
-                )
-            elif item["modification_type"] == "decrease":
-                if variable_value - item["modification_value"] < item["minimum_value"]:
-                    new_variable_value = item["minimum_value"]
-                else:
-                    new_variable_value = variable_value - item["modification_value"]
-                setattr(
-                    game_state,
-                    item["variable_name"],
-                    new_variable_value,
-                )
-
-            return game_state
-
-        self.options_list += self.random_items(
-            game_state.default_number_shop_items, game_state
+        item_rarity_probabilities = self._calculate_rarity_probabilities(
+            game_state.current_level
         )
+        items_list = self._get_random_items(
+            game_state.default_number_shop_items, item_rarity_probabilities
+        )
+        self.selected_option = 0
 
         while True:
             for event in pygame.event.get():
@@ -171,212 +53,293 @@ class ShopPhase:
                 self.selected_option = event_handler.handle_option_navigation(
                     event,
                     self.selected_option,
-                    len(self.options_list),
+                    len(items_list) + 1,
                 )
 
                 if event_handler.handle_option_selection(event):
-                    if self.selected_option == 0:  # Start level
+                    if self.selected_option == 0:  # Continue to next phase
                         return game_state
 
-                    item = self.options_list[self.selected_option]  # Item selected
-                    if item["price"] > game_state.current_credits:
-                        break  # Not enough credits to buy item
+                    if (
+                        items_list[self.selected_option - 1]["price"]
+                        <= game_state.current_credits
+                    ):
+                        game_state, items_list = self._buy_item(
+                            self.selected_option - 1, items_list, game_state
+                        )
 
-                    game_state = _buy_item(item, game_state)
+            self.render_shop_phase(game_state, items_list)
 
-            self.render_shop_phase(game_state)
+    def _buy_item(
+        self, item_index: int, items_list: list[dict[str, Any]], game_state: GameState
+    ) -> tuple[GameState, list[dict[str, Any]]]:
+        """Buys an item from the shop.
 
-    def render_shop_phase(self, game_state: GameState):
-        """Renders the shop/laboratory"""
+        Args:
+            item_index (int): Index of the item to buy.
+            items_list (list[dict[str, Any]]): List of items in the shop.
+            game_state (GameState): Game state object.
 
-        # Render background
-        # self.screen.blit(
-        #    self.image_assets.shop_background,
-        #    self.image_assets.shop_background_rectangle,
-        # )
-        self.screen.fill((255, 255, 255))
+        Returns:
+            tuple[GameState, list[dict[str, Any]]]: Updated game state and items list.
+        """
 
-        # Blit the current reactor image
-        self.screen.blit(
-            self.image_assets.reactor_background,
-            self.image_assets.reactor_background_rectangle,
+        item = items_list[item_index]
+        game_state.current_credits = round(
+            game_state.current_credits - item["price"], 2
         )
-        reactor_stirrer_image_counter = calculate_frame_delay(
-            self.frame_count,
-            game_state.fps_maximum,
-            game_state.fps_maximum // 4,
-            len(self.image_assets.reactor_stirrer_images),
-        )
-        self.screen.blit(
-            self.image_assets.reactor_stirrer_images[reactor_stirrer_image_counter],
-            self.image_assets.reactor_background_rectangle,
-        )
-        reactor_liquid_image_counter = calculate_frame_delay(
-            self.frame_count,
-            game_state.fps_maximum,
-            game_state.fps_maximum // 8,
-            len(self.image_assets.reactor_liquid_images),
-        )
-        self.screen.blit(
-            self.image_assets.reactor_liquid_images[reactor_liquid_image_counter],
-            self.image_assets.reactor_background_rectangle,
-        )
+        variable_value = getattr(game_state, item["variable_name"])
+        items_list.pop(item_index)
 
-        # Render statistics computer background
-        self.screen.blit(
-            self.image_assets.shop_computer_image,
-            self.image_assets.shop_computer_image_rectangle,
-        )
+        # Update selection to the previous item if possible
+        if len(items_list) == 0:
+            self.selected_option = 0
+        elif self.selected_option > len(items_list):
+            self.selected_option = len(items_list)
+        else:
+            # Stay on the same index (which now points to the next item down)
+            pass
 
-        # Render the shop title
-        title_text = self.font_assets.large_font.render(
-            "Welcome to the lab - prepare for your next cultivation!",
-            True,
-            self.colors.black,
-            self.colors.white,
-        )
-        title_rectangle = title_text.get_rect(
-            center=(self.screen_size[0] // 2, self.screen_size[1] // 10)
-        )
-
-        self.screen.blit(title_text, title_rectangle)
-
-        # Credits calculation info
-        info_text = self.font_assets.small_font.render(
-            "Credits = Biomass price * Growth rate",
-            True,
-            self.colors.black,
-            self.colors.white,
-        )
-        info_rectangle = info_text.get_rect(
-            center=(self.screen_size[0] // 1.23, self.screen_size[1] // 5.5)
-        )
-
-        self.screen.blit(info_text, info_rectangle)
-
-        # Render current credits
-        credits_text = self.font_assets.large_font.render(
-            f"Credits: {game_state.current_credits}",
-            True,
-            self.colors.orange,
-        )
-        credits_rectangle = title_text.get_rect(
-            topleft=(self.screen_size[0] // 1.27, self.screen_size[1] // 4.5)
-        )
-        self.screen.blit(credits_text, credits_rectangle)
-
-        # Render the shop options
-        for i, option in enumerate(self.options_list):
-            # Define colors
-
-            if option["name"] == "Start batch":
-                highlight_color = self.colors.gray
-            else:
-                highlight_color = self.colors.item_rarity_colors[
-                    self.item_rarities_colors[option["rarity"]]
-                ]
-            unselected_color = (
-                min(max(0, highlight_color[0] - 65), 255),
-                min(max(0, highlight_color[1] - 65), 255),
-                min(max(0, highlight_color[2] - 65), 255),
+        # Apply modification
+        if item["modification_type"] == "increase":
+            new_variable_value = min(
+                variable_value + item["modification_value"], item["maximum_value"]
             )
-            if self.selected_option == i:
-                color = highlight_color
-            else:
-                color = unselected_color
-
-            # Render shop options
-            if option["name"] == "Start batch":
-                option_text = self.font_assets.title_font.render(
-                    option["name"], True, color
-                )
-            else:
-                option_text = self.font_assets.medium_small_font.render(
-                    option["name"] + f" [{str(option['price'])}]",
-                    True,
-                    color,
-                )
-            option_rect = option_text.get_rect(
-                topright=(self.screen_size[0] - 30, self.screen_size[1] // 3 + i * 70)
+        elif item["modification_type"] == "decrease":
+            new_variable_value = max(
+                variable_value - item["modification_value"], item["minimum_value"]
             )
+        else:
+            new_variable_value = variable_value  # No modification
 
-            self.screen.blit(option_text, option_rect)
+        setattr(game_state, item["variable_name"], new_variable_value)
 
-        # Render statistics
+        return game_state, items_list
 
-        current_number_hexagons = (
-            3 * game_state.current_level**2 + 3 * game_state.current_level + 1
-        )
+    def _get_random_items(
+        self,
+        number_of_items: int,
+        item_rarity_probabilities: list[float],
+    ) -> list[dict[str, Any]]:
+        """Returns random items with level dependent rarity from the shop items list.
 
-        specs = {
-            "Biomass price": game_state.biomass_price,
-            "Cell Inoculum size": game_state.number_cells,
-            "Reactor capacity": current_number_hexagons,
-            "Reactor mixing inhomogeneity": round(
-                game_state.hexagon_nutrient_varation, 3
-            ),
-            "Substrate richness": round(game_state.hexagon_nutrient_richness, 3),
-            "Cell division threshold": round(game_state.cell_division_threshold, 3),
-            "Cell initial energy": round(game_state.cell_energy_initial, 3),
-            "Cell energy inhomogeneity": round(game_state.cell_energy_variation, 3),
-            "Substrate consumption rate": round(
-                game_state.cell_energy_consumption_rate_maximum, 3
-            ),
-            "Cell nutrient affinity": round(game_state.cell_energy_affinity, 3),
-        }
-        for i, option in enumerate(specs):
-            option_text = self.font_assets.small_font.render(
-                f"{option}: {specs[option]}", True, self.colors.black
-            )
-            option_rect = option_text.get_rect(
-                topleft=(
-                    self.screen_size[0] // 28,
-                    self.screen_size[1] // 3 + i * 30,
-                )
-            )
-            self.screen.blit(option_text, option_rect)
+        Args:
+            number_of_items (int): Number of items to return.
+            item_rarity_probabilities (list[float]): Rarity probabilities for each item.
 
-        # Display FPS
-        if game_state.show_fps:
-            display_fps(
-                self.screen, self.font_assets.small_font, self.clock, self.colors.white
-            )
+        Returns:
+            list[dict[str, Any]]: List of random items with rarity and modification value.
+        """
 
-        # Update the display
-        pygame.display.flip()
-
-        # Cap frame rate
-        self.clock.tick(game_state.fps_maximum)
-
-        # Increment the frame count
-        self.frame_count += 1
-
-    def random_items(self, number_of_items: int, game_state: GameState):
-        """Returns random item stats with rarity according to lvl"""
-
-        item_indices = [
-            random.randint(0, len(self.item_stats) - 1) for i in range(number_of_items)
-        ]
-        item_rarities_chances = [
-            (1 + game_state.current_level) / (1 + chance**3)
-            for chance in self.item_rarities_indices
-        ]
-        item_rarities = random.choices(
-            self.item_rarities_indices,
-            item_rarities_chances,
+        random_items = random.choices(self.item_stats, k=number_of_items)
+        random_items_rarities = random.choices(
+            self.item_rarity_indices,
+            item_rarity_probabilities,
             k=number_of_items,
         )
 
-        items = []
-        for index, item_index in enumerate(item_indices):
-            item = self.item_stats[item_index]
+        rarity_adjusted_items = []
+        for item in random_items:
+            item["rarity"] = random_items_rarities[random_items.index(item)]
             item["modification_value"] = item["default_modification_value"] * (
-                item_rarities[index] + 1
+                item["rarity"] + 1
             )
-            item["price"] = int(
-                round(item["default_price"] * 2 * (item_rarities[index] + 1))
-            )
-            item["rarity"] = item_rarities[index]
-            items.append(item)
+            item["price"] = round(item["default_price"] * 2 * (item["rarity"] + 1))
+            rarity_adjusted_items.append(item)
 
-        return items
+        return rarity_adjusted_items
+
+    def _calculate_rarity_probabilities(self, current_level: int) -> list[float]:
+        """Calculates the rarity probabilities based on the current level.
+
+        Args:
+            current_level (int): Current level of the game.
+        """
+
+        return [
+            (1 + current_level) / (1 + rarity**3) for rarity in self.item_rarity_indices
+        ]
+
+    def _check_item_modification_validity_color(
+        self,
+        item: dict[str, Any],
+        game_state: GameState,
+    ) -> str | None:
+        """Checks if the item modification is valid.
+
+        Args:
+            item (dict[str, Any]): Item to check.
+            game_state (GameState): Game state object.
+
+        Returns:
+            str: Color indicating the validity of the item modification.
+        """
+
+        current_variable_value = getattr(game_state, item["variable_name"])
+
+        if item["modification_type"] == "increase":
+            if current_variable_value < item["maximum_value"]:
+                if (
+                    round(current_variable_value + item["modification_value"], 2)
+                    <= item["maximum_value"]
+                ):
+                    return "green"
+                return "yellow"
+            return "red"
+
+        if item["modification_type"] == "decrease":
+            if current_variable_value > item["minimum_value"]:
+                if (
+                    round(current_variable_value - item["modification_value"], 2)
+                    >= item["minimum_value"]
+                ):
+                    return "green"
+                return "yellow"
+            return "red"
+
+    def render_shop_phase(
+        self, game_state: GameState, items_list: list[dict[str, Any]]
+    ) -> None:
+        """Renders the shop phase.
+
+        Args:
+            game_state (GameState): Game state object.
+            items_list (list[dict[str, Any]]): List of items in the shop.
+        """
+
+        # Background
+        self.render_manager.render_background("white")
+
+        # Reactor background image
+        self.render_manager.render_image(
+            image_name="reactor_background",
+            position_args={"center": (0.5, 0.5)},
+            size_args=("height", 0.9),
+        )
+
+        # Stirrer animation
+        self.render_manager.render_animation(
+            image_name="reactor_stirrer",
+            images_per_second=game_state.fps_maximum // 4,
+            position_args={"center": (0.5, 0.5)},
+            size_args=("height", 0.9),
+        )
+
+        # Liquid animation
+        self.render_manager.render_animation(
+            image_name="reactor_liquid",
+            images_per_second=game_state.fps_maximum // 8,
+            position_args={"center": (0.5, 0.5)},
+            size_args=("height", 0.9),
+        )
+
+        # Shadow overlay
+        self.render_manager.render_shadow_overlay(alpha=140)
+
+        # Shop computer image
+        self.render_manager.render_image(
+            image_name="shop_computer_image",
+            position_args={"bottomleft": (0, 1)},
+            size_args=("height", 0.72),
+        )
+
+        # Gather statistics
+        current_statistics = {
+            "biomass_price": {
+                "text": "Biomass price",
+                "value": round(game_state.biomass_price, 3),
+            },
+            "number_cells": {
+                "text": "Cell Inoculum size",
+                "value": game_state.number_cells,
+            },
+            "hexagon_nutrient_variation": {
+                "text": "Reactor mixing inhomogeneity",
+                "value": round(game_state.hexagon_nutrient_variation, 3),
+            },
+            "hexagon_nutrient_richness": {
+                "text": "Substrate richness",
+                "value": round(game_state.hexagon_nutrient_richness, 3),
+            },
+            "cell_division_threshold": {
+                "text": "Cell division threshold",
+                "value": round(game_state.cell_division_threshold, 3),
+            },
+            "cell_energy_initial": {
+                "text": "Cell initial energy",
+                "value": round(game_state.cell_energy_initial, 3),
+            },
+            "cell_energy_variation": {
+                "text": "Cell energy inhomogeneity",
+                "value": round(game_state.cell_energy_variation, 3),
+            },
+            "cell_energy_consumption_rate_maximum": {
+                "text": "Substrate consumption rate",
+                "value": round(game_state.cell_energy_consumption_rate_maximum, 3),
+            },
+            "cell_energy_affinity": {
+                "text": "Cell nutrient affinity",
+                "value": round(game_state.cell_energy_affinity, 3),
+            },
+        }
+
+        selected_item_index = self.selected_option - 1
+        if self.selected_option != 0:
+            item_variable_name = items_list[selected_item_index]["variable_name"]
+            highlight_color = self._check_item_modification_validity_color(
+                items_list[selected_item_index], game_state
+            )
+        else:
+            item_variable_name = None
+            highlight_color = "black"
+
+        # Render options/statistics
+        self.render_manager.render_options_values(
+            option_items=current_statistics,
+            position_args={"topleft": (0.036, 0.33)},
+            selected_item_name=item_variable_name,
+            font_name="small_font",
+            distance_between_options=0.05,
+            highlight_color=highlight_color,
+            option_color="black",
+        )
+
+        # Title
+        self.render_manager.render_text(
+            "Welcome to the lab - prepare for your next cultivation!",
+            "large_font",
+            "white",
+            {"center": (0.5, 0.1)},
+        )
+
+        # Current credits
+        self.render_manager.render_text(
+            text=f"Current credits: {game_state.current_credits:.2f}",
+            font_name="medium_font",
+            font_color_name="black",
+            position_args={"topright": (0.975, 0.5)},
+        )
+
+        # Shop items
+        selected_item = selected_item_index if selected_item_index >= 0 else None
+        self.render_manager.render_shop_items(
+            shop_items=items_list,
+            selected_item=selected_item,
+            font_name="large_font",
+            position_args={"topleft": (0.575, 0.6)},
+            distance_between_items=0.1,
+        )
+
+        # Continue button
+        self.render_manager.render_text(
+            text="Start next batch",
+            font_name="large_font",
+            font_color_name="light_gray",
+            position_args={"topright": (0.975, 0.4)},
+            highlight=(self.selected_option == 0),
+        )
+
+        self.render_manager.render_fps(game_state, self.clock, "small_font")
+
+        pygame.display.flip()
+        self.clock.tick(game_state.fps_maximum)

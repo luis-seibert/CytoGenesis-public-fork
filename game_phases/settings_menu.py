@@ -1,59 +1,39 @@
-import sys
-
 import pygame
-from pygame import Surface
 from pygame.time import Clock
 
-from assets.colors import Colors
-from assets.font_assets import FontAssets
-from assets.image_assets import ImageAssets
+from base_elements import event_handler
 from base_elements.game_state import GameState
 from base_elements.hexagon_grid import HexagonGrid
-from base_elements.utils import display_fps
-from utils import event_handler
+from base_elements.render_manager import RenderManager
 
 
 class SettingsMenu:
+    """Settings menu class that manages the settings menu of the game."""
+
     def __init__(
-        self,
-        screen: Surface,
-        clock: Clock,
-        font_assets: FontAssets,
-        image_assets: ImageAssets,
-        colors: Colors,
+        self, clock: Clock, render_manager: RenderManager, hexagon_grid: HexagonGrid
     ) -> None:
-        pygame.init()
-
-        self.screen: Surface = screen
-        self.clock: Clock = clock
-        self.font_assets: FontAssets = font_assets
-        self.image_assets: ImageAssets = image_assets
-        self.colors: Colors = colors
-
-        self.screen_size: tuple[int, int] = screen.get_size()
+        self.clock = clock
+        self.render_manager = render_manager
+        self.hexagon_grid = hexagon_grid
 
         self.menu_options: list[str] = [
             "Number of levels",
             "Size of Inoculum",
             "Show FPS",
+            "Fullscreen",
         ]
-        self.selected_option: int = 0
-        self.secondary_option_selected: bool = False
+        self.selected_option = 0
+        self.secondary_option_selected = False
+        self.full_screen_toggled = False
 
     def run_settings_menu(self, game_state: GameState) -> GameState:
-        """Runs the settings menu."""
+        """Main loop for the settings menu.
 
-        # Create hexagon grid for settings menu
-        hexagon_grid = HexagonGrid(game_state, self.screen)
-        self.settings_menu_hexagons = hexagon_grid.main_menu_grid()
-        for coordinate in self.settings_menu_hexagons:
-            hexagon_nutrient_color = self.settings_menu_hexagons[coordinate].color[
-                game_state.default_hexagon_nutrient_color_index
-            ]
-            hexagon_nutrient_color = min(hexagon_nutrient_color + 110, 255)
-            self.settings_menu_hexagons[coordinate].color[
-                game_state.default_hexagon_nutrient_color_index
-            ] = hexagon_nutrient_color
+        Args:
+            game_state (GameState): The current game state.
+        Returns:
+            GameState: The updated game state after settings changes."""
 
         while True:
             for event in pygame.event.get():
@@ -82,10 +62,28 @@ class SettingsMenu:
                         game_state.show_fps = event_handler.handle_change_bool_option(
                             event, game_state.show_fps
                         )
+                    elif self.selected_option == 3:  # Toggle fullscreen
+                        game_state.full_screen = (
+                            event_handler.handle_change_bool_option(
+                                event, game_state.full_screen
+                            )
+                        )
+                        self.full_screen_toggled = (
+                            event_handler.handle_change_bool_option(
+                                event, self.full_screen_toggled
+                            )
+                        )
+
                 else:
                     self.selected_option = event_handler.handle_option_navigation(
                         event, self.selected_option, len(self.menu_options)
                     )
+                    if self.full_screen_toggled:
+                        self.render_manager.toggle_full_screen(game_state.full_screen)
+                        self.hexagon_grid.update_hexagon_vertices(
+                            game_state, self.render_manager.current_screen_size
+                        )
+                        self.full_screen_toggled = False
                     if event_handler.handle_escape(event):
                         return game_state
 
@@ -95,89 +93,106 @@ class SettingsMenu:
                     )
                 )
 
-            self.render_settings(
-                game_state, self.selected_option, self.secondary_option_selected
-            )
+            self.render_settings(game_state)
 
-    def render_settings(
-        self,
-        game_state: GameState,
-        selected_option: int,
-        secondary_option_selected: bool,
-    ):
-        """Renders the options menu"""
+    def render_settings(self, game_state: GameState) -> None:
+        """Renders the settings menu.
 
-        global frame_count
+        Args:
+            game_state (GameState): The current game state.
+        """
 
-        # Render background
-        self.screen.blit(
-            self.image_assets.colonization_phase_background,
-            self.image_assets.colonization_phase_background_rectangle,
+        self.render_manager.render_hexagons(self.hexagon_grid)
+        self.render_manager.render_shadow_overlay(color="black", alpha=100)
+        self.render_manager.render_text(
+            "Settings",
+            "title_font",
+            "white",
+            {
+                "center": (
+                    0.5,
+                    0.1,
+                )
+            },
         )
 
-        # Render background hexagons
-        for hexagon in self.settings_menu_hexagons.values():
-            hexagon.render(self.screen, self.colors.black)
-
-        # Shade overlay
-        game_over_screen_fade = pygame.Surface(self.screen.get_size())
-        game_over_screen_fade.fill((0, 0, 0))
-        game_over_screen_fade.set_alpha(60)
-        self.screen.blit(game_over_screen_fade, (0, 0))
-
-        # Render the title
-        title_text = self.font_assets.title_font.render(
-            "Settings", True, self.colors.black
-        )
-        title_rect = title_text.get_rect(
-            center=(self.screen_size[0] // 2, self.screen_size[1] // 10)
-        )
-        self.screen.blit(title_text, title_rect)
-
-        # Render the settings menu options
-        for i, option in enumerate(self.menu_options):
-            color = (
-                self.colors.orange
-                if i == selected_option and not secondary_option_selected
-                else self.colors.gray
-            )
-            option_text = self.font_assets.title_font.render(option, True, color)
-            option_rect = option_text.get_rect(
-                topleft=(self.screen_size[0] // 10, self.screen_size[1] // 4 + i * 50)
-            )
-            self.screen.blit(option_text, option_rect)
-
-        # Render the settings menu option values
         settings_menu_option_values = [
             game_state.default_number_levels,
             game_state.default_number_cells,
             game_state.show_fps,
+            game_state.full_screen,
         ]
 
-        for i, option in enumerate(settings_menu_option_values):
-            color = (
-                self.colors.orange
-                if i == selected_option and secondary_option_selected
-                else self.colors.gray
-            )
-            option_text = self.font_assets.title_font.render(str(option), True, color)
-            option_rect = option_text.get_rect(
-                topright=(
-                    self.screen_size[0] - self.screen_size[0] // 10,
-                    self.screen_size[1] // 4 + i * 50,
-                )
-            )
-            self.screen.blit(option_text, option_rect)
+        self._render_menu_options(settings_menu_option_values)
 
-        # Display FPS
-        if game_state.show_fps:
-            display_fps(
-                self.screen, self.font_assets.small_font, self.clock, self.colors.black
-            )
-
-        # Update display
-        pygame.display.flip()  # Update the display
-
-        # Cap frame rate
+        self.render_manager.render_fps(game_state, self.clock, "small_font")
+        pygame.display.flip()
         self.clock.tick(game_state.fps_maximum)
-        # self.frame_count += 1
+
+    def _render_menu_options(self, option_values: list) -> None:
+        """Helper method to render menu options and their values.
+
+        Args:
+            option_values (list): The values of the options to be rendered.
+        """
+
+        option_distance = 0.075
+
+        if self.secondary_option_selected:
+            self.render_manager.render_options(
+                self.menu_options,
+                None,
+                "title_font",
+                {
+                    "topleft": (
+                        0.1,
+                        0.25,
+                    )
+                },
+                distance_between_options=option_distance,
+                highlight_color="white",
+                option_color="black",
+            )
+            self.render_manager.render_options(
+                option_values,
+                self.selected_option,
+                "title_font",
+                {
+                    "topright": (
+                        0.9,
+                        0.25,
+                    )
+                },
+                distance_between_options=option_distance,
+                highlight_color="white",
+                option_color="black",
+            )
+        else:
+            self.render_manager.render_options(
+                self.menu_options,
+                self.selected_option,
+                "title_font",
+                {
+                    "topleft": (
+                        0.1,
+                        0.25,
+                    )
+                },
+                distance_between_options=option_distance,
+                highlight_color="white",
+                option_color="black",
+            )
+            self.render_manager.render_options(
+                option_values,
+                None,
+                "title_font",
+                {
+                    "topright": (
+                        0.9,
+                        0.25,
+                    )
+                },
+                distance_between_options=option_distance,
+                highlight_color="white",
+                option_color="black",
+            )

@@ -4,89 +4,82 @@ import pygame
 
 
 class ImageAssets:
-    def __init__(
-        self, screen_size: tuple[int, int]
-    ) -> None:  # screen_size: tuple[width, height]
+    """Class to manage image assets for the game."""
+
+    def __init__(self, screen_size: tuple[int, int]) -> None:
         pygame.init()
+        self.screen_size = screen_size
 
-        # Phase background images
-        self.shop_background = pygame.transform.scale(
-            pygame.image.load(
-                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
-            ),
-            (screen_size[0], screen_size[1]),
-        )
-        self.shop_background_rectangle = self.shop_background.get_rect()
+        # Load all assets
+        self.static_images = self._load_static_images()
+        self.animated_images = self._load_animated_images()
 
-        self.colonization_phase_background = pygame.transform.scale(
-            pygame.image.load(
-                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
-            ),
-            (screen_size[0], screen_size[1]),
-        )
-        self.colonization_phase_background_rectangle = (
-            self.colonization_phase_background.get_rect()
-        )
+    def _load_image(self, filename: str) -> pygame.Surface:
+        path = os.path.join(os.getcwd(), "assets", "images", filename)
+        return pygame.image.load(path).convert_alpha()
 
-        self.point_screen_size_background = pygame.transform.scale(
-            pygame.image.load(
-                os.path.join(os.getcwd(), "assets", "images", "shop_background.png")
-            ),
-            (screen_size[0], screen_size[1]),
-        )
-        self.point_screen_size_background_rectangle = (
-            self.point_screen_size_background.get_rect()
-        )
+    def _load_static_images(self) -> dict[str, pygame.Surface]:
+        """Load all static images used in the game."""
+        return {
+            "shop_background": self._load_image("shop_background.png"),
+            "colonization_background": self._load_image("shop_background.png"),
+            "point_screen_background": self._load_image("shop_background.png"),
+            "reactor_background": self._load_image("reactor_background.png"),
+            "shop_computer_image": self._load_image("computer_transparent_2.png"),
+        }
 
-        # Reactor body images
-        reactor_image_path = os.path.join(
-            os.getcwd(), "assets", "images", "reactor_background.png"
-        )
-        reactor_liquid_path = os.path.join(os.getcwd(), "assets", "images", "liquid")
-        reactor_stirrer_path = os.path.join(os.getcwd(), "assets", "images", "stirrer")
-        reactor_image_factor = 6
-        self.reactor_background = pygame.transform.scale(
-            pygame.image.load(reactor_image_path),
-            (49 * reactor_image_factor, 83 * reactor_image_factor),
-        )
-        self.reactor_background_rectangle = self.reactor_background.get_rect()
-        self.reactor_background_rectangle.center = (
-            screen_size[0] // 2,
-            screen_size[1] // 2,
-        )
+    def _load_animated_images(self) -> dict[str, list[pygame.Surface]]:
+        """Load all frame sequences for animated assets."""
+        return {
+            "reactor_liquid": self._load_animation_sequence("liquid", 31),
+            "reactor_stirrer": self._load_animation_sequence("stirrer", 3),
+        }
 
-        # Reactor liquid images
-        self.reactor_liquid_images = [
-            pygame.transform.scale(
-                pygame.image.load(os.path.join(reactor_liquid_path, f"{i + 1}.png")),
-                (49 * reactor_image_factor, 83 * reactor_image_factor),
-            )
-            for i in range(31)
+    def _load_animation_sequence(
+        self, folder_name: str, frame_count: int
+    ) -> list[pygame.Surface]:
+        """Helper to load animation frames from a folder."""
+
+        base_path = os.path.join(os.getcwd(), "assets", "images", folder_name)
+        return [
+            pygame.image.load(os.path.join(base_path, f"{i + 1}.png")).convert_alpha()
+            for i in range(frame_count)
         ]
 
-        # Reactor stirrer images
-        self.reactor_stirrer_images = [
-            pygame.transform.scale(
-                pygame.image.load(os.path.join(reactor_stirrer_path, f"{i + 1}.png")),
-                (49 * reactor_image_factor, 83 * reactor_image_factor),
-            )
-            for i in range(3)
-        ]
+    def get_image(self, image_name: str) -> pygame.Surface:
+        """Get a static image by name.
 
-        # Shop images
-        computer_image_scaling_factor = 400
-        temporary_computer_image = pygame.image.load(
-            os.path.join(os.getcwd(), "assets", "images", "computer2.png")
-        )
-        self.shop_computer_image = pygame.transform.scale(
-            temporary_computer_image,
-            (
-                computer_image_scaling_factor * 0.95,
-                computer_image_scaling_factor * 1.2,
-            ),
-        )
-        self.shop_computer_image_rectangle = self.shop_computer_image.get_rect()
-        self.shop_computer_image_rectangle.center = (
-            int(round(screen_size[0] // 5.5)),
-            int(round(screen_size[1] // 1.455)),
-        )
+        Args:
+            image_name (str): The name of the image to retrieve.
+
+        Returns:
+            pygame.Surface: The requested image surface.
+
+        Raises:
+            ValueError: If the image is not found in the static images.
+        """
+
+        image = self.static_images.get(image_name)
+        if image is None:
+            raise ValueError(f"Image '{image_name}' not found in static images.")
+        return image
+
+    def get_animation_frames(self, animation_name: str) -> list[pygame.Surface]:
+        """Get animation frames by name.
+
+        Args:
+            animation_name (str): The name of the animation to retrieve.
+
+        Returns:
+            list[pygame.Surface]: A list of frames for the requested animation.
+
+        Raises:
+            ValueError: If the animation is not found in the animated images.
+        """
+
+        frames = self.animated_images.get(animation_name)
+        if frames is None:
+            raise ValueError(
+                f"Animation '{animation_name}' not found in animated images."
+            )
+        return frames

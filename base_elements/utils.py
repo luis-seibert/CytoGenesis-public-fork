@@ -1,98 +1,131 @@
 import math
+from typing import Any
 
-import pygame
-from pygame import Surface
-
-
-def round_to_odd(value):
-    """Round to the nearest integer and force it to be odd if it's even"""
-
-    rounded = round(value)
-
-    # If even, adjust by 1 to make it odd
-    return (
-        rounded if rounded % 2 != 0 else rounded + 1 if value > rounded else rounded - 1
-    )
+import yaml
 
 
-def round_to_even(value):
-    """Round to the nearest integer and force it to be even if it's odd"""
+def get_config_from_yaml(path: str) -> Any:
+    """Get configs from a yaml file.
 
-    rounded = round(value)
+    Args:
+        path (str): The path to the yaml file.
+    """
 
-    # If even, adjust by 1 to make it odd
-    return (
-        rounded if rounded % 2 == 0 else rounded + 1 if value > rounded else rounded - 1
-    )
+    with open(path, "r", encoding="utf-8") as file:
+        config = yaml.safe_load(file)
 
-
-def display_fps(screen: Surface, font, clock, color) -> None:
-    fps_text = {
-        "text": font.render("FPS: " + str(int(clock.get_fps())), True, color),
-        "pos": (20, 20),
-    }
-    screen.blit(fps_text["text"], fps_text["pos"])
+    return config
 
 
-def calculate_frame_delay(
-    frame_count: int,
-    fps_maximum: int,
-    imgage_fps: int,
-    number_of_images: int,
-) -> int:
-    """Calculates image index for given image FPS"""
+def calculate_hexagon_neighbors(
+    axial_coordinate: tuple[int, int],
+) -> list[tuple[int, int]]:
+    """Calculates neighboring tiles relative to given axial coordinates.
 
-    frame_delay = fps_maximum // imgage_fps
+    Args:
+        axial_coordinate (tuple[int, int]): The axial coordinates of the hexagon.
 
-    return int((frame_count // frame_delay) % number_of_images)
+    Returns:
+        list[tuple[int, int]]: A list of neighboring hexagon coordinates.
+    """
+
+    r, q = axial_coordinate
+
+    return [
+        (-1 + r, 0 + q),
+        (-1 + r, 1 + q),
+        (0 + r, -1 + q),
+        (0 + r, 1 + q),
+        (1 + r, -1 + q),
+        (1 + r, 0 + q),
+    ]
+
+
+def calculate_axial_distance(a_axial: tuple[int, int], b_axial: tuple[int, int]) -> int:
+    """Calculates distance in hex tiles between two coordinates in skewed coordinates.
+
+    Args:
+        a_axial (tuple[int, int]): The axial coordinates of the first hexagon.
+        b_axial (tuple[int, int]): The axial coordinates of the second hexagon.
+
+    Returns:
+        int: The distance in hex tiles between the two coordinates.
+    """
+
+    a_cube = axial_to_cube(a_axial)
+    b_cube = axial_to_cube(b_axial)
+
+    return round(cube_distance(a_cube, b_cube))
+
+
+def cube_distance(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+    """Calculates distance in hex tiles between two coordinates in cube coordinates.
+
+    Args:
+        a (tuple[int, int, int]): The cube coordinates of the first hexagon.
+        b (tuple[int, int, int]): The cube coordinates of the second hexagon.
+
+    Returns:
+        float: The distance in hex tiles between the two coordinates.
+    """
+
+    vector = a[0] - b[0], a[1] - b[1], a[2] - b[2]
+
+    return (abs(vector[0]) + abs(vector[1]) + abs(vector[2])) / 2
+
+
+def axial_to_cube(coordinates_axial: tuple[int, int]) -> tuple[int, int, int]:
+    """Converts axial (skewed) r, q to cube coordinates with r, q, s.
+
+    Args:
+        coordinates_axial (tuple[int, int]): The axial coordinates of the hexagon.
+
+    Returns:
+        tuple[int, int, int]: The cube coordinates of the hexagon.
+    """
+
+    r = coordinates_axial[0]
+    q = coordinates_axial[1]
+    s = -q - r
+
+    return r, q, s
+
+
+def cube_to_axial(coordinates_cube: tuple[int, int, int]) -> tuple[int, int]:
+    """Converts cube r, q, s to axial (skewed) coordinates with r, q.
+
+    Args:
+        coordinates_cube (tuple[int, int, int]): The cube coordinates of the hexagon.
+
+    Returns:
+        tuple[int, int]: The axial coordinates of the hexagon.
+    """
+
+    r, q, _ = coordinates_cube
+
+    return r, q
 
 
 def calculate_pixel_from_axial(
     center: tuple[int, int], minimal_radius: int, axial_coordinates: tuple[int, int]
 ) -> tuple[int, int]:
-    """Converts relative skewed hexagonal position to absolute pixel coordinates"""
+    """Converts relative skewed hexagonal position to absolute pixel coordinates.
+
+    Args:
+        center (tuple[int, int]): The center pixel coordinates.
+        minimal_radius (int): The minimal radius of the hexagon.
+        axial_coordinates (tuple[int, int]): The axial coordinates of the hexagon.
+
+    Returns:
+        tuple[int, int]: The pixel coordinates of the hexagon.
+    """
 
     r, q = axial_coordinates
 
-    pix_x: int = int(center[0] + r * 2 * minimal_radius + minimal_radius * q)
-    pix_y: int = int(
-        center[1] + q * math.sqrt((2 * minimal_radius) ** 2 - minimal_radius**2)
-    )
+    x_offset = r * 2 * minimal_radius + minimal_radius * q
+    y_offset = q * math.sqrt(3) * minimal_radius
+
+    pix_x = round(center[0] + x_offset)
+    pix_y = round(center[1] + y_offset)
 
     return (pix_x, pix_y)
-
-
-def blit_text_box(
-    screen: Surface,
-    size_left_top_width_height,
-    text_items,
-    font,
-    text_color,
-    background_color,
-):
-    """Renders a box with text at specified position with size and color of box and text"""
-
-    # Create rectangle with distance to left and top, and size width, height
-    box_rectangle = pygame.Rect(
-        size_left_top_width_height[0],
-        size_left_top_width_height[1],
-        size_left_top_width_height[2],
-        size_left_top_width_height[3],
-    )
-
-    # Draw the box
-    pygame.draw.rect(screen, background_color, box_rectangle)
-
-    # Blit multiple text items inside the box
-    for i, text in enumerate(text_items):
-        # Render the text
-        text_surface = font.render(text, True, text_color)
-        # Calculate the position to blit the text
-        text_rectangle = text_surface.get_rect()
-        text_rectangle.topleft = (
-            box_rectangle.x + 10,
-            box_rectangle.y + 10 + i * 40,
-        )
-
-        # Blit the text
-        screen.blit(text_surface, text_rectangle)

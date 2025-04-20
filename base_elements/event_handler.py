@@ -64,15 +64,15 @@ def handle_change_option_value_with_circling(
     event: Event,
     value: int,
     maximum_value: int,
-    minimum_value: int | None = None,
+    minimum_value: int = 0,
 ) -> int:
-    """Handle option value change and circle back to the minimum value or zero.
+    """Handle option value change and circle back to the minimum value.
 
     Args:
         event (Event): Pygame event.
         value (int): Option value that is currently selected.
-        maximum_value (int): Maximum value before returning.
-        minimum_value (int, optional): Minimum value. Defaults to None.
+        maximum_value (int): Maximum value (inclusive).
+        minimum_value (int, optional): Minimum value. Defaults to 0.
 
     Returns:
         int: New value.
@@ -80,16 +80,27 @@ def handle_change_option_value_with_circling(
 
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_UP:
-            value = (value + 1) % maximum_value
-        if event.key == pygame.K_DOWN:
-            value = (value - 1) % maximum_value
+            value += 1
+            if value > maximum_value:
+                value = minimum_value
+        elif event.key == pygame.K_DOWN:
+            value -= 1
             if value < minimum_value:
                 value = maximum_value
 
-    return value if minimum_value is None else max(minimum_value, value)
+    return value
 
 
 def handle_change_bool_option(event: Event, selected_option: bool) -> bool:
+    """Handle option value change and circle back to the minimum value.
+
+    Args:
+        event (Event): Pygame event.
+        selected_option (bool): Option value that is currently selected.
+
+    Returns:
+        bool: New value.
+    """
 
     if event.type == pygame.KEYDOWN:
         if event.key in [pygame.K_UP, pygame.K_DOWN]:
@@ -101,6 +112,15 @@ def handle_change_bool_option(event: Event, selected_option: bool) -> bool:
 def handle_secondary_option_selection(
     event: Event, secondary_option_selected: bool
 ) -> bool:
+    """Handle secondary option selection.
+
+    Args:
+        event (Event): Pygame event.
+        secondary_option_selected (bool): Secondary option selected.
+
+    Returns:
+        bool: New value.
+    """
 
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_RETURN:
@@ -115,6 +135,14 @@ def handle_secondary_option_selection(
 
 
 def handle_option_selection(event: Event) -> bool:
+    """Handle option selection.
+
+    Args:
+        event (Event): Pygame event.
+
+    Returns:
+        bool: True if the option is selected, False otherwise.
+    """
 
     if event.type == pygame.KEYDOWN:
         if event.key == pygame.K_RETURN:

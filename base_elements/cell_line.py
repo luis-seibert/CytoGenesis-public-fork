@@ -1,141 +1,192 @@
 import random
 
 import numpy
-from pygame import Surface
 
 from base_elements.cell import Cell
 from base_elements.game_state import GameState
+from base_elements.hexagon_grid import HexagonGrid
 from base_elements.hexagon_tile import HexagonTile
+from base_elements.utils import calculate_axial_distance, calculate_hexagon_neighbors
 
 
 class CellLine:
+    """Cell line class that manages the cells in the game."""
+
     def __init__(
         self,
-        screen: Surface,
+        hexagon_grid: HexagonGrid,
+        game_state: GameState,
+        screen_size: tuple[int, int],
     ) -> None:
-        self.screen: Surface = screen
+        self.cells = self._create_cells(hexagon_grid, game_state, screen_size)
 
-    def create_cells(
-        self, hexagons: dict[tuple[int, int], HexagonTile], game_state: GameState
+    def update_cell_radius(self, hexagon_grid: HexagonGrid) -> None:
+        """Updates the radius of all cells in the cell line.
+
+        Args:
+            hexagon_grid (HexagonGrid): The hexagonal grid containing the cells.
+        """
+
+        for cell in self.cells.values():
+            cell.update_radius(hexagon_grid.minimal_radius)
+
+    def _create_cells(
+        self,
+        hexagon_grid: HexagonGrid,
+        game_state: GameState,
+        screen_size: tuple[int, int],
     ) -> dict[tuple[int, int], Cell]:
-        """Creates a cell line of n-cells on given hexagons"""
+        """Creates a cell line on given hexagon grid.
 
-        # Clip number_cells to number of hexagons
-        if game_state.number_cells > len(hexagons):
-            level_number_cells = len(hexagons)
-        else:
-            level_number_cells = game_state.number_cells
+        Args:
+            hexagon_grid (HexagonGrid): The hexagonal grid to create cells on.
+            game_state (GameState): The game state containing the current game parameters.
+            screen_size (tuple[int, int]): The size of the screen.
 
-        cells_coordinates = self.generate_random_positions(
-            hexagons, level_number_cells
-        )  # generate random skew coordinates for cells
+        Returns:
+            dict[tuple[int, int], Cell]: A dictionary of cells with their coordinates as keys.
+        """
+
+        number_cells = min(game_state.number_cells, len(hexagon_grid.hexagons))
+        coordinates = self._generate_random_positions(
+            hexagon_grid.hexagons, number_cells
+        )
 
         cells = {}
-        for i in range(level_number_cells):
-            cell_coordinates = cells_coordinates[i]
-            cell = Cell(self.screen, cell_coordinates, game_state)
-            cell.game_state.cell_energy_consumption_rate_maximum = (
-                cell.game_state.cell_energy_consumption_rate_maximum
-                * (
-                    0.5
-                    + 0.5 * (game_state.current_level / (1 + game_state.current_level))
-                )
+        for i in range(number_cells):
+            cell = Cell(
+                coordinates[i], game_state, hexagon_grid.minimal_radius, screen_size
             )
-            cells[cell_coordinates] = cell
-
-            hexagons[cell_coordinates].cell_on_hexagon = cell
+            cell.energy_consumption_rate_maximum = self._scale_energy_consumption_rate(
+                game_state.cell_energy_consumption_rate_maximum,
+                game_state.current_level,
+            )
+            cells[coordinates[i]] = cell
 
         return cells
 
     def replicate_cell(
         self,
-        cell: Cell,
-        cells,
-        hexagons: dict[tuple[int, int], HexagonTile],
+        cell_coordinate: tuple[int, int],
+        hexagon_grid: HexagonGrid,
         game_state: GameState,
-    ):
-        """Replicates given mature cell, alters the parent and adds daughter cell"""
+        screen_size: tuple[int, int],
+    ) -> tuple[int, int] | None:
+        """Replicates given mature cell to a new cell in the hexagon grid.
 
-        # Get neighbouring hex tiles
-        all_neighbours_coordinates = self.calculate_hexagon_neighbours(
-            cell.center_axial
+        Args:
+            cell_coordinate (tuple[int, int]): The coordinate of the cell to replicate.
+            hexagon_grid (HexagonGrid): The hexagonal grid containing the cells.
+            game_state (GameState): The game state containing the current game parameters.
+
+        Returns:
+            tuple[int, int] | None: The coordinates of the new cell or None if no unoccupied
+            neighbors are found.
+        """
+
+        neighbor_coordinates = calculate_hexagon_neighbors(cell_coordinate)
+        unoccupied_hexagons = hexagon_grid.hexagons.keys() - self.cells.keys()
+        unoccupied_neighbors_coordinates = list(
+            set(neighbor_coordinates).intersection(unoccupied_hexagons)
         )
 
-        valid_neighbour_coordinates = [
-            neighbour_coordinate
-            for neighbour_coordinate in all_neighbours_coordinates
-            if neighbour_coordinate in hexagons
-            and not hexagons[neighbour_coordinate].cell_on_hexagon
-        ]
-
-        if valid_neighbour_coordinates:
-            # Clone daughter cell into random free hexagon
-            daughter_hexagon_coordinates = random.choice(valid_neighbour_coordinates)
-            new_cell = Cell(
-                self.screen,
-                hexagons[daughter_hexagon_coordinates].coordinate_axial,
+        if unoccupied_neighbors_coordinates:
+            daughter_coordinates = random.choice(unoccupied_neighbors_coordinates)
+            daughter_cell = Cell(
+                daughter_coordinates,
                 game_state,
+                hexagon_grid.minimal_radius,
+                screen_size,
             )
-            new_cell.energy = cell.energy / 2
-            cells[daughter_hexagon_coordinates] = new_cell
-            hexagons[daughter_hexagon_coordinates].cell_on_hexagon = new_cell
 
-            # Highlight new hexagon
-            hexagons[daughter_hexagon_coordinates].highlight = True
+            self.cells[cell_coordinate].energy_value /= 2
+            daughter_cell.energy_value = self.cells[cell_coordinate].energy_value
 
-            # Half mother cell energy
-            cell.energy = cell.energy / 2
+            self.cells[daughter_coordinates] = daughter_cell
+            hexagon_grid.hexagons[daughter_coordinates].set_highlight()
 
-        else:
-            cell.growth = False  # growth arrest
+            return daughter_coordinates
 
-        return cells, hexagons
+        self.cells[cell_coordinate].growth = False
 
-    def gaussian_probability(self, dist, sigma=0.25):
-        """Calculate gaussian probability from distance with given std_dev = sigma"""
+    def get_biomass(self) -> float:
+        """Calculates the total biomass of the cell line.
 
-        coeff = 1 / (sigma * numpy.sqrt(2 * numpy.pi))
-        exponent = numpy.exp(-(dist**2) / (2 * sigma**2))
-        return coeff * exponent
+        Returns:
+            float: The total biomass of the cell line.
+        """
 
-    def generate_random_positions(
+        return sum(cell.energy_value for cell in self.cells.values())
+
+    def _generate_random_positions(
         self, hexagons: dict[tuple[int, int], HexagonTile], number_cells: int
-    ):
-        """Creates n random cell positions with a Gaussian distribution around central hexagon"""
+    ) -> list[tuple[int, int]]:
+        """Creates random cell positions with a Gaussian distribution around central hexagon.
 
-        coords, probabilities = [], []
+        Args:
+            hexagons (dict[tuple[int, int], HexagonTile]): The hexagonal tiles.
+            number_cells (int): The number of cells to create.
 
-        # Calculate probabilities from distance to center
-        for hex_key in hexagons:
-            distance = hexagons[hex_key].distance_to_center
-            coords.append(hexagons[hex_key].coordinate_axial)
-            probabilities.append(
-                self.gaussian_probability(distance)
-            )  # Calculate Gaussian prob for each distance
+        Returns:
+            list[tuple[int, int]]: A list of random cell positions.
+        """
 
-        # Normalize probabilities to sum to 1
-        probabilities /= numpy.array(probabilities).sum()
+        random_coordinates, coordinate_probabilities = [], []
 
-        # Clip no_cells to number of hexagons
-        if number_cells > len(hexagons):
-            number_cells = len(hexagons)
+        for hexagon_coordinate in hexagons.keys():
+            distance_to_center = calculate_axial_distance((0, 0), hexagon_coordinate)
+            random_coordinates.append(hexagon_coordinate)
+            coordinate_probabilities.append(
+                self._gaussian_probability(distance_to_center)
+            )
+
+        coordinate_probabilities /= numpy.array(
+            coordinate_probabilities
+        ).sum()  # Normalize probabilities to sum to 1
+
+        number_cells = min(number_cells, len(hexagons))
 
         selected_indices = numpy.random.choice(
-            len(coords), size=number_cells, replace=False, p=probabilities
+            len(random_coordinates),
+            size=number_cells,
+            replace=False,
+            p=coordinate_probabilities,
         )
 
-        return [coords[i] for i in selected_indices]
+        return [random_coordinates[i] for i in selected_indices]
 
-    def calculate_hexagon_neighbours(self, center: tuple[int, int]):
-        """Calculates neighbouring tiles relative to center"""
+    def _gaussian_probability(self, distance, sigma=0.25) -> float:
+        """Calculate gaussian probability from distance with given standard deviation.
 
-        r, q = center
+        Args:
+            distance (float): The distance from the center.
+            sigma (float, optional): The standard deviation. Defaults to 0.25.
 
-        return [
-            (-1 + r, 0 + q),
-            (-1 + r, 1 + q),
-            (0 + r, -1 + q),
-            (0 + r, 1 + q),
-            (1 + r, -1 + q),
-            (1 + r, 0 + q),
-        ]
+        Returns:
+            float: The gaussian probability.
+        """
+
+        coefficient = 1 / (sigma * numpy.sqrt(2 * numpy.pi))
+        exponent = numpy.exp(-(distance**2) / (2 * sigma**2))
+
+        return coefficient * exponent
+
+    def _scale_energy_consumption_rate(
+        self,
+        energy_consumption_rate: float,
+        current_level: int,
+    ) -> float:
+        """Scale energy consumption rate based on current level.
+
+        Args:
+            energy_consumption_rate (float): The base energy consumption rate.
+            current_level (int): The current level of the game.
+
+        Returns:
+            float: The scaled energy consumption rate."""
+
+        return energy_consumption_rate * (
+            0.5 + 0.5 * (current_level / (1 + current_level))
+        )
+
+        # TODO how to scale this correctly, in respect to dt!?

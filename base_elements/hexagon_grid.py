@@ -1,98 +1,154 @@
+import math
 import random
 
 import numpy
-from pygame import Surface
 
+from assets.colors import Colors
 from base_elements.game_state import GameState
 from base_elements.hexagon_tile import HexagonTile
+from base_elements.utils import (
+    calculate_axial_distance,
+    calculate_pixel_from_axial,
+    cube_to_axial,
+)
 
 
 class HexagonGrid:
-    def __init__(self, game_state: GameState, screen: Surface) -> None:
-        self.game_state: GameState = game_state
-        self.screen: Surface = screen
+    """Hexagonal grid class that creates a grid of hexagonal tiles.
 
-    def initialize_hexagons(self) -> dict[tuple[int, int], HexagonTile]:
-        """Creates a hexagonal tile hexagon with a number of rings around central hexagon
-        hexagons: flat dict with skew coordinates as tuple for hex access
+    Args:
+        game_state (GameState): The game state containing the current game parameters.
+        screen_size (tuple[int, int]): The size of the screen.
+    """
+
+    def __init__(self, game_state: GameState, screen_size: tuple[int, int]) -> None:
+        self._update_size_parameters(screen_size, game_state)
+        self.default_hexagon_body_color = list(Colors().hexagon_body)
+        self.hexagons = self._create_hexagon_ring(
+            game_state.current_level,
+            game_state.hexagon_nutrient_variation,
+            game_state.hexagon_nutrient_richness,
+        )
+        self.update_hexagon_vertices(game_state, screen_size)
+
+    def update_hexagon_vertices(
+        self, game_state: GameState, screen_size: tuple[int, int]
+    ) -> None:
+        """Updates the vertices of all hexagons in the grid based on the new screen size.
+
+        Args:
+            game_state (GameState): The game state containing the current game parameters.
+            screen_size (tuple[int, int]): The new screen size.
         """
 
-        hexagons = {}
-        rings = self.game_state.current_level
-        coordinates = self.get_hextile_distant_neighbours((0, 0), rings)
+        self._update_size_parameters(screen_size, game_state)
+        for hexagon in self.hexagons.values():
+            hexagon.vertices = self._get_hexagon_vertices(hexagon.coordinate_axial)
 
-        # Create hexagons with coordinates
-        for axial_coordinates in coordinates:
-            new_hexagon = self.create_hexagon(axial_coordinates)
-            hexagons[axial_coordinates] = new_hexagon
+    def _update_size_parameters(
+        self, screen_size: tuple[int, int], game_state: GameState
+    ) -> None:
+        """Updates the size parameters of the hexagonal grid based on the screen size.
 
-        return hexagons
+        Args:
+            screen_size (tuple[int, int]): The size of the screen.
+            game_state (GameState): The game state containing the current game parameters.
+        """
 
-    def main_menu_grid(self) -> dict[tuple[int, int], HexagonTile]:
-
-        screen_width, screen_height = self.screen.get_size()
-        dummy_hexagon = self.create_hexagon((0, 0))
-        number_r_hexagons = int(screen_width / dummy_hexagon.maximal_radius) + 1
-        number_q_hexagons = int(screen_height / dummy_hexagon.minimal_radius) + 1
-
-        coordinates = []
-        r_offset = -int(round(number_r_hexagons / 2))
-        q_offset = -int(round(number_q_hexagons / 2))
-        for r in range(number_r_hexagons):
-            for q in range(number_q_hexagons):
-                coordinates.append((r_offset + r, q_offset + q))
-
-        hexagons = {}
-        for coordinate in coordinates:
-            hexagons[coordinate] = self.create_hexagon(coordinate)
-
-        return hexagons
-
-    def create_hexagon(self, axial_coordinate):
-        """Creates a hexagon tile at position with min radius given by SIZE and nutrient value"""
-
-        distance_to_center = self.axial_distance((0, 0), axial_coordinate)
-
-        hexagon_color = list(self.game_state.default_hexagon_body_color)
-
-        nutrient_color = (
-            hexagon_color[self.game_state.default_hexagon_nutrient_color_index]
-            * numpy.exp(-self.game_state.hexagon_nutrient_varation * distance_to_center)
-            * (
-                1
-                + random.uniform(
-                    -self.game_state.hexagon_nutrient_richness,
-                    self.game_state.hexagon_nutrient_richness,
-                )
-            )
+        self.screen_center_pixel = (
+            round(screen_size[0] // 2),
+            round(screen_size[1] // 2),
         )
-        if nutrient_color > 255:
-            nutrient_color = 255
 
-        index = self.game_state.default_hexagon_nutrient_color_index
-        hexagon_color[index] = nutrient_color
+        self.minimal_radius = round(
+            round(screen_size[1] // game_state.default_hexagon_minimal_radius_fraction)
+        )
+        self.maximal_radius = round(self.minimal_radius / (math.sqrt(3) / 2))
+
+    def _create_hexagon_ring(
+        self, number_rings: int, nutrient_variation: float, nutrient_richness: float
+    ) -> dict[tuple[int, int], HexagonTile]:
+        """Creates a hexagonal tile grid with a given number of rings around the center tile.
+
+        Args:
+            number_rings (int): The number of rings to create around the center tile.
+            nutrient_variation (float): The variation of nutrient.
+            nutrient_richness (float): The richness of nutrient.
+
+        Returns:
+            dict: A dictionary containing the hexagonal tiles with their axial coordinates as keys.
+        """
+
+        hexagon_grid = {}
+        hexagon_coordinates = self._get_neighbor_coordinates_with_distance(
+            (0, 0), number_rings
+        )
+
+        for axial_coordinates in hexagon_coordinates:
+            hexagon = self.create_hexagon(
+                axial_coordinates,
+                nutrient_variation,
+                nutrient_richness,
+            )
+            hexagon_grid[axial_coordinates] = hexagon
+
+        return hexagon_grid
+
+    def create_hexagon(
+        self, axial_coordinate, nutrient_variation: float, nutrient_richness: float
+    ) -> HexagonTile:
+        """Creates a hexagon tile with the given axial coordinates.
+
+        Args:
+            axial_coordinate (tuple[int, int]): The axial coordinates of the hexagon.
+            nutrient_variation (float): The variation of nutrient.
+            nutrient_richness (float): The richness of nutrient.
+
+        Returns:
+            HexagonTile: The created hexagon tile.
+        """
+
+        axial_distance_to_center = calculate_axial_distance((0, 0), axial_coordinate)
+
+        nutrient_value = min(
+            numpy.exp(-nutrient_variation * axial_distance_to_center)
+            * (1 + random.uniform(-nutrient_richness, nutrient_richness)),
+            1,
+        )
+
+        vertices = self._get_hexagon_vertices(axial_coordinate)
 
         return HexagonTile(
-            self.screen,
-            self.game_state.default_hexagon_size,
             axial_coordinate,
-            distance_to_center,
-            hexagon_color,
-            nutrient_color / 255,
+            vertices,
+            nutrient_value,
+            self.default_hexagon_body_color,
         )
 
-    def get_hextile_distant_neighbours(
+    def _get_neighbor_coordinates_with_distance(
         self, center_axial: tuple[int, int], distance_axial: int
     ) -> list[tuple[int, int]]:
-        """Calculates all hexagon tiles with distance from center through the constraint r+q+s = 0"""
+        """Calculates all hexagon tiles with the given distance from the center.
 
-        base_vector = [i for i in range(-distance_axial, distance_axial + 1)]
+        The coordinates are calculated in cube coordinates (r, q, s) and then converted to axial
+        coordinates (r, q),. Valid hexagons are selected with r + q + s = 0.
+
+        Args:
+            center_axial (tuple[int, int]): The axial coordinates of the center hexagon.
+            distance_axial (int): The distance from the center hexagon.
+
+        Returns:
+            list[tuple[int, int]]: A list of axial coordinates of hexagons within given distance.
+
+        """
+
+        base_vector = list(range(-distance_axial, distance_axial + 1))
         coordinates = []
         for r in base_vector:
             for q in base_vector:
                 for s in base_vector:
                     if r + q + s == 0:
-                        coordinate = self.cube_to_axial((r, q, s))
+                        coordinate = cube_to_axial((r, q, s))
                         coordinate = (
                             coordinate[0] + center_axial[0],
                             coordinate[1] + center_axial[1],
@@ -101,31 +157,29 @@ class HexagonGrid:
 
         return coordinates
 
-    def axial_distance(self, a_axial: tuple[int, int], b_axial: tuple[int, int]) -> int:
-        """Calculates distance in hex tiles between two coordinates in skewed coordinates"""
+    def _get_hexagon_vertices(
+        self, hexagon_coordinate_axial: tuple[int, int]
+    ) -> list[tuple[float, float]]:
+        """Calculates the vertices of a hexagon based on its axial coordinates.
 
-        a_cube = self.axial_to_cube(a_axial)
-        b_cube = self.axial_to_cube(b_axial)
+        Args:
+            hexagon_coordinate_axial (tuple[int, int]): The axial coordinates of the hexagon.
 
-        return int(self.cube_distance(a_cube, b_cube))
+        Returns:
+            list[tuple[float, float]]: A list of vertices of the hexagon.
+        """
 
-    def axial_to_cube(self, coordinates_axial: tuple[int, int]) -> tuple[int, int, int]:
-        """Converts axial (skewed) r, q to cube coordinates with r, q, s"""
+        x_coordinate_pixel, y_coordinate_pixel = calculate_pixel_from_axial(
+            self.screen_center_pixel, self.minimal_radius, hexagon_coordinate_axial
+        )
 
-        r = coordinates_axial[0]
-        q = coordinates_axial[1]
-        s = -q - r
+        vertices = []
+        for i in range(6):
+            angle = math.radians(
+                30 + 60 * i
+            )  # 60 degrees increments for hexagon inner angles
+            x = x_coordinate_pixel + self.maximal_radius * math.cos(angle)
+            y = y_coordinate_pixel + self.maximal_radius * math.sin(angle)
+            vertices.append((x, y))
 
-        return r, q, s
-
-    def cube_to_axial(self, coordinates_cube: tuple[int, int, int]) -> tuple[int, int]:
-        """Converts cube r, q, s to axial (skewed) coordinates with r, q"""
-
-        r, q, s = coordinates_cube
-
-        return r, q
-
-    def cube_distance(self, a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
-        vec = a[0] - b[0], a[1] - b[1], a[2] - b[2]
-
-        return (abs(vec[0]) + abs(vec[1]) + abs(vec[2])) / 2
+        return vertices

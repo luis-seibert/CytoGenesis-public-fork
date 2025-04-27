@@ -1,3 +1,10 @@
+"""Core module for the handling of events in the game.
+
+This module defines functions to handle various events in the game, such as quitting the game,
+navigating options, changing option values, and selecting options. These functions are used to
+manage user interactions with the game and to update the game state based on user input.
+"""
+
 import sys
 
 import pygame
@@ -109,9 +116,7 @@ def handle_change_bool_option(event: Event, selected_option: bool) -> bool:
     return selected_option
 
 
-def handle_secondary_option_selection(
-    event: Event, secondary_option_selected: bool
-) -> bool:
+def handle_secondary_option_selection(event: Event, secondary_option_selected: bool) -> bool:
     """Handle secondary option selection.
 
     Args:

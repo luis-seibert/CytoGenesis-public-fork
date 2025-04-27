@@ -1,8 +1,8 @@
 import pygame
 from pygame.time import Clock
 
-from base_elements.game_state import GameState
-from base_elements.render_manager import RenderManager
+from core_modules.game_state import GameState
+from core_modules.render_manager import RenderManager
 from game_phases.main_menu import MainMenu
 
 

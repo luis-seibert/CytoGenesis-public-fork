@@ -1,3 +1,11 @@
+"""Assets module for color constants used in the game.
+
+This module defines a Colors class that contains various color constants used throughout the game.
+The colors are represented as RGB tuples, which can be used for rendering graphics, backgrounds,
+and other visual elements in the game.
+"""
+
+
 class Colors:
     """Color constants for the game."""
 
@@ -19,7 +27,6 @@ class Colors:
 
     colonization_background: tuple[int, int, int] = (230, 230, 230)
 
-    # Item rarity colors
     item_common: tuple[int, int, int] = (155, 155, 155)  # Gray
     item_uncommon: tuple[int, int, int] = (51, 204, 51)  # Green
     item_rare: tuple[int, int, int] = (0, 102, 204)  # Blue

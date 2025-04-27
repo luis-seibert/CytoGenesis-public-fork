@@ -1,20 +1,38 @@
+"""Core module for various utility functions for the game."""
+
 import math
+import os
 from typing import Any
 
 import yaml
 
 
-def get_config_from_yaml(path: str) -> Any:
+def load_config_from_yaml(path: str) -> Any | None:
     """Get configs from a yaml file.
 
     Args:
         path (str): The path to the yaml file.
+
+    Returns:
+        Any | None: The contents of the yaml file or None if the file does not exist.
     """
 
-    with open(path, "r", encoding="utf-8") as file:
-        config = yaml.safe_load(file)
+    if os.path.exists(path):
+        with open(path, "r", encoding="utf-8") as file:
+            return yaml.safe_load(file)
+    return None
 
-    return config
+
+def save_config_to_yaml(path: str, data: Any) -> None:
+    """Save data to a yaml file.
+
+    Args:
+        path (str): The path to the yaml file.
+        data (Any): The data to save to the yaml file.
+    """
+
+    with open(path, "w", encoding="utf-8") as file:
+        yaml.dump(data, file)
 
 
 def calculate_hexagon_neighbors(
@@ -52,13 +70,13 @@ def calculate_axial_distance(a_axial: tuple[int, int], b_axial: tuple[int, int])
         int: The distance in hex tiles between the two coordinates.
     """
 
-    a_cube = axial_to_cube(a_axial)
-    b_cube = axial_to_cube(b_axial)
+    a_cube = convert_axial_to_cube(a_axial)
+    b_cube = convert_axial_to_cube(b_axial)
 
-    return round(cube_distance(a_cube, b_cube))
+    return round(calculate_cube_distance(a_cube, b_cube))
 
 
-def cube_distance(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
+def calculate_cube_distance(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
     """Calculates distance in hex tiles between two coordinates in cube coordinates.
 
     Args:
@@ -74,7 +92,7 @@ def cube_distance(a: tuple[int, int, int], b: tuple[int, int, int]) -> float:
     return (abs(vector[0]) + abs(vector[1]) + abs(vector[2])) / 2
 
 
-def axial_to_cube(coordinates_axial: tuple[int, int]) -> tuple[int, int, int]:
+def convert_axial_to_cube(coordinates_axial: tuple[int, int]) -> tuple[int, int, int]:
     """Converts axial (skewed) r, q to cube coordinates with r, q, s.
 
     Args:
@@ -91,7 +109,7 @@ def axial_to_cube(coordinates_axial: tuple[int, int]) -> tuple[int, int, int]:
     return r, q, s
 
 
-def cube_to_axial(coordinates_cube: tuple[int, int, int]) -> tuple[int, int]:
+def convert_cube_to_axial(coordinates_cube: tuple[int, int, int]) -> tuple[int, int]:
     """Converts cube r, q, s to axial (skewed) coordinates with r, q.
 
     Args:

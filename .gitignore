@@ -9,12 +9,11 @@
 
 # vscode
 .vscode/
-*.code-workspace
 
 # env
 .env
 
-# venvs
+# venv
 .venv/
 
 # Pycache in all subdirectories

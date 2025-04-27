@@ -1,22 +1,34 @@
+"""Core module for rendering objects on the screen.
+
+This module contains the RenderManager class, which is responsible for rendering various game
+elements such as backgrounds, animations, images, hexagons, cells, text, and options on the screen.
+The class provides methods to handle rendering in both full screen and windowed modes, as well as
+to manage the rendering of different game states and objects.
+"""
+
 from typing import Any
 
 import pygame
 from pygame.font import Font
+from pygame.time import Clock
 
 from assets.colors import Colors
 from assets.font_assets import FontAssets
 from assets.image_assets import ImageAssets
-from base_elements.cell_line import CellLine
-from base_elements.game_state import GameState
-from base_elements.hexagon_grid import HexagonGrid
+from core_modules.cell_line import CellLine
+from core_modules.game_state import GameState
+from core_modules.hexagon_grid import HexagonGrid
 
 
 class RenderManager:
-    """Manages rendering objects on the screen."""
+    """Manages rendering objects on the screen.
 
-    def __init__(
-        self, initial_screen_size: tuple[int, int], full_screen: bool = False
-    ) -> None:
+    Args:
+        initial_screen_size (tuple[int, int]): Initial size of the screen.
+        full_screen (bool, optional): True full screen, False windowed mode. Defaults to False.
+    """
+
+    def __init__(self, initial_screen_size: tuple[int, int], full_screen: bool = False) -> None:
         self.windowed_screen_size: tuple[int, int] = (1024, 576)
         self.current_screen_size: tuple[int, int] = initial_screen_size
         self.toggle_full_screen(full_screen)
@@ -24,6 +36,21 @@ class RenderManager:
         self.image_assets: ImageAssets = ImageAssets(self.current_screen_size)
         self.font_assets: FontAssets = FontAssets(self.current_screen_size)
         self.colors: Colors = Colors()
+
+    def update_screen(self, game_state: GameState, clock: Clock) -> None:
+        """Updates the screen with the current game state and clock.
+
+        THis method is responsible for updating the screen with rendered objects,
+        including FPS display, background color, and any other game elements.
+
+        Args:
+            game_state (GameState): The current game state.
+            clock (Clock): The clock to manage the game loop.
+        """
+
+        self.render_fps(game_state, clock, "small_font")
+        pygame.display.flip()
+        clock.tick(game_state.fps_maximum)
 
     def toggle_full_screen(self, full_screen: bool) -> None:
         """Toggles between full screen and windowed mode.
@@ -41,7 +68,7 @@ class RenderManager:
         self.image_assets = ImageAssets(self.current_screen_size)
         self.font_assets = FontAssets(self.current_screen_size)
 
-    def render_background(self, color: str) -> None:
+    def render_background_color(self, color: str) -> None:
         """Renders a background color on the screen.
 
         Args:
@@ -50,7 +77,7 @@ class RenderManager:
 
         self.screen.fill(getattr(self.colors, color))
 
-    def render_animation(
+    def render_image_animation(
         self,
         image_name: str,
         images_per_second: int,
@@ -58,6 +85,14 @@ class RenderManager:
         size_args: tuple[str, float],
     ) -> None:
         """Renders an animation on the screen.
+
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
+
+        Size args are in the form of a tuple with the first element
+        being either "width" or "height" and the second element being
+        the fraction of the screen size to scale the image to.
 
         Args:
             image_name (str): Name of the animation to render.
@@ -71,9 +106,7 @@ class RenderManager:
             raise ValueError(f"Animation '{image_name}' not found in assets.")
 
         number_of_images = len(image_list)
-        image_index = int(
-            pygame.time.get_ticks() / (1000 / images_per_second) % number_of_images
-        )
+        image_index = int(pygame.time.get_ticks() / (1000 / images_per_second) % number_of_images)
 
         self._render_surface(
             surface=image_list[image_index],
@@ -86,9 +119,8 @@ class RenderManager:
         image_name: str,
         position_args: dict[str, tuple[float, float]],
         size_args: tuple[str, float],
-        image_index: int | None = None,
     ) -> None:
-        """Renders a static or frame-based image.
+        """Renders a static image on the screen.
 
         Position args are in the form of a dictionary with keys as
         "topleft", "topright", "bottomleft", "bottomright", "center"
@@ -102,21 +134,14 @@ class RenderManager:
             image_name (str): Name of the image to render.
             position_args (dict[str, tuple[float, float]]): Position of the image as fractions.
             size_args (tuple[str, float]): Size of the image as a fraction of the screen size.
-            image_index (int | None, optional): Index of the image frame to render.
         """
 
-        if image_index is not None:
-            image_list = self.image_assets.get_animation_frames(image_name)
-            if not image_list:
-                raise ValueError(f"Animation '{image_name}' not found in assets.")
-            original_image = image_list[image_index]
-        else:
-            original_image = self.image_assets.get_image(image_name)
-            if original_image is None:
-                raise ValueError(f"Image '{image_name}' not found in assets.")
+        image = self.image_assets.get_image(image_name)
+        if image is None:
+            raise ValueError(f"Image '{image_name}' not found in assets.")
 
         self._render_surface(
-            surface=original_image,
+            surface=image,
             position_args=position_args,
             size_args=size_args,
         )
@@ -129,12 +154,21 @@ class RenderManager:
     ) -> None:
         """Scales and renders a given surface.
 
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
+
+        Size args are in the form of a tuple with the first element
+        being either "width" or "height" and the second element being
+        the fraction of the screen size to scale the image to.
+
         Args:
             surface (pygame.Surface): The surface to render.
             position_args (dict[str, tuple[float, float]]): Position of the surface as fractions.
             size_args (tuple[str, float]): Size of the surface as a fraction of the screen size.
         """
 
+        # Scaling
         base_dimension, fraction = size_args
         if base_dimension == "width":
             new_width = int(self.current_screen_size[0] * fraction)
@@ -146,7 +180,6 @@ class RenderManager:
             new_width = int(new_height * aspect_ratio)
         else:
             raise ValueError("size_args must be ('width' or 'height', float)")
-
         scaled_surface = pygame.transform.scale(surface, (new_width, new_height))
 
         # Positioning
@@ -162,6 +195,10 @@ class RenderManager:
 
     def render_shadow_overlay(self, color: str = "black", alpha: int = 60) -> None:
         """Renders a shadow overlay on the screen.
+
+        This method creates a semi-transparent overlay on the screen to
+        simulate a shadow effect. The overlay is filled with the specified
+        color and has a specified alpha value for transparency.
 
         Args:
             color (str, optional): Color of the shade overlay. Defaults to "black".
@@ -221,14 +258,21 @@ class RenderManager:
         font_color_name: str,
         position_args: dict[str, tuple[float, float]],
         highlight: bool = False,
+        highlight_color: str | None = None,
     ) -> None:
         """Renders text on the screen.
+
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
 
         Args:
             text (str): Text to render.
             font_name (str): Name of the font to use.
             font_color (str): Color of the font.
             position_args (dict[str, tuple[float, float]]): Position of the text as fractions.
+            highlight (bool, optional): Whether to highlight the text. Defaults to False.
+            highlight_color (str | None, optional): Color of the highlighted text. Defaults to None.
         """
 
         # Convert position_args to pixel values
@@ -242,11 +286,14 @@ class RenderManager:
 
         font_color: tuple[int, int, int] = getattr(self.colors, font_color_name)
         if highlight:
-            font_color = (
-                min(round(font_color[0] * 1.5), 255),
-                min(round(font_color[1] * 1.5), 255),
-                min(round(font_color[2] * 1.5), 255),
-            )
+            if not highlight_color:
+                font_color = (
+                    min(round(font_color[0] * 1.5), 255),
+                    min(round(font_color[1] * 1.5), 255),
+                    min(round(font_color[2] * 1.5), 255),
+                )
+            else:
+                font_color = getattr(self.colors, highlight_color)
         font: Font = getattr(self.font_assets, font_name)
         text_surface = font.render(text, True, font_color)
         text_rect = text_surface.get_rect(**position_args)
@@ -263,6 +310,10 @@ class RenderManager:
         option_color: str = "black",
     ) -> None:
         """Renders a list of options and values on the screen.
+
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
 
         Args:
             option_items (list[Any]): List of options and corresponding values to render.
@@ -306,6 +357,10 @@ class RenderManager:
     ) -> None:
         """Renders a list of options on the screen.
 
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
+
         Args:
             option_items (list[str]): List of options to render.
             selected_option (int | None): Index of the selected option.
@@ -341,6 +396,10 @@ class RenderManager:
     ) -> None:
         """Renders the FPS on the screen.
 
+        This method displays the current frames per second (FPS) on the screen
+        if the game state allows it. The FPS is calculated using the provided
+        pygame clock object.
+
         Args:
             game_state (GameState): Game state object.
             font (Font): Font to use.
@@ -353,7 +412,7 @@ class RenderManager:
                 f"FPS: {fps}",
                 font_name,
                 "black",
-                {"topleft": (0.1, 0.1)},
+                {"topleft": (0.02, 0.02)},
             )
 
     def render_shop_items(
@@ -366,6 +425,10 @@ class RenderManager:
     ) -> None:
         """Renders a list of shop items on the screen.
 
+        Position args are in the form of a dictionary with keys as
+        "topleft", "topright", "bottomleft", "bottomright", "center"
+        and values as tuples of fractions of the screen size.
+
         Args:
             shop_items (list[dict[str, Any]]): List of shop items to render.
             selected_item (int | None): Index of the selected item.
@@ -377,25 +440,6 @@ class RenderManager:
         position_key = next(iter(position_args))
         base_position = position_args[position_key]
 
-        # Render item panel background
-        item_panel_background = pygame.Surface(self.current_screen_size)
-        item_panel_background.fill("black")
-        item_panel_background.set_alpha(100)
-        self.screen.blit(
-            item_panel_background,
-            dest=(
-                (base_position[0] - 0.025) * self.current_screen_size[0],  # X position
-                (base_position[1] - 0.025) * self.current_screen_size[1],  # Y position
-            ),
-            area=(
-                0,
-                0,
-                self.current_screen_size[0] * 0.5,  # Width of the panel
-                self.current_screen_size[1] * 0.33,  # Height of the panel
-            ),
-        )
-
-        # Render shop items
         item_rarity_colors = [
             "item_common",
             "item_uncommon",

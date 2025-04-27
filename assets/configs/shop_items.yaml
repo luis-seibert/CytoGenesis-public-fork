@@ -1,66 +1,66 @@
 - variable_name: "hexagon_nutrient_richness"
   name: "Substrate richness"
   modification_type: "increase"
-  default_modification_value: 0.01
+  default_modification_value: 0.15
   minimum_value: 0
   maximum_value: 1
-  default_price: 40
+  default_price: 60
 
 - variable_name: "number_cells"
   name: "Cell Inoculum size"
   modification_type: "increase"
   default_modification_value: 1
   minimum_value: 1
-  maximum_value: 5
-  default_price: 22
+  maximum_value: 10
+  default_price: 85
 
 - variable_name: "hexagon_nutrient_variation"
   name: "Reactor inhomogeneity"
   modification_type: "decrease"
-  default_modification_value: 0.01
+  default_modification_value: 0.06
   minimum_value: 0
   maximum_value: 1
-  default_price: 30
+  default_price: 50
 
 - variable_name: "cell_energy_affinity"
   name: "Cell nutrient affinity"
   modification_type: "increase"
-  default_modification_value: 0.001
+  default_modification_value: 0.0025
   minimum_value: 0.001
   maximum_value: 0.1
-  default_price: 16
+  default_price: 20
 
 - variable_name: "cell_division_threshold"
   name: "Cell division threshold"
   modification_type: "decrease"
-  default_modification_value: 0.1
+  default_modification_value: 0.035
   minimum_value: 0.1
   maximum_value: 1
-  default_price: 25
+  default_price: 70
 
 - variable_name: "cell_energy_initial"
   name: "Cell initial energy"
   modification_type: "increase"
-  default_modification_value: 0.05
+  default_modification_value: 0.075
   minimum_value: 0.1
   maximum_value: 1
-  default_price: 23
+  default_price: 20
 
 - variable_name: "cell_energy_variation"
   name: "Cell energy variation"
   modification_type: "decrease"
-  default_modification_value: 0.05
+  default_modification_value: 0.1
   minimum_value: 0
   maximum_value: 1
-  default_price: 7
+  default_price: 15
 
 - variable_name: "cell_energy_consumption_rate_maximum"
   name: "Cell consumption rate"
   modification_type: "increase"
-  default_modification_value: 0.0025
+  default_modification_value: 0.005
   minimum_value: 0.01
   maximum_value: 0.2
-  default_price: 32
+  default_price: 18
 
 - variable_name: "biomass_price"
   name: "Biomass selling price"

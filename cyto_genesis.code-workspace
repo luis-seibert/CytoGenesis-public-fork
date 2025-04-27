@@ -1,0 +1,31 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"isort.args": [
+			"--line-length=100"
+		],
+		"[python]": {
+			"editor.defaultFormatter": "ms-python.black-formatter"
+		},
+		"black-formatter.args": [
+			"--line-length=100"
+		],
+		"python.analysis.typeCheckingMode": "standard",
+	},
+	"launch": {
+		"version": "0.2.0",
+		"configurations": [
+			{
+				"name": "Run CytoGenesis Debug",
+				"type": "debugpy",
+				"request": "launch",
+				"module": "start_game",
+				"justMyCode": false,
+			}
+		]
+	}
+}

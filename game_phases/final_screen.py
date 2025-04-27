@@ -1,23 +1,34 @@
+"""Game phase for handling the final screen of the game.
+
+This phase displays the final score and high scores, allowing the player to return to the main menu.
+It includes rendering the final screen, updating high scores, and handling user input.
+"""
+
 import pygame
 from pygame.time import Clock
 
-from base_elements import event_handler
-from base_elements.game_state import GameState
-from base_elements.highscore_manager import update_highscores
-from base_elements.player_data_manager import load_player_name
-from base_elements.render_manager import RenderManager
+from core_modules import event_handler
+from core_modules.game_state import GameState
+from core_modules.highscore_manager import update_highscores
+from core_modules.player_data_manager import load_player_name
+from core_modules.render_manager import RenderManager
 
 
 class FinalScreen:
-    """Class to handle the final run highscore screen of the game."""
+    """Class to handle the final run highscore screen of the game.
+
+    Args:
+        clock (Clock): The clock to manage the game loop.
+        render_manager (RenderManager): The render manager to handle rendering.
+    """
 
     def __init__(
         self,
         clock: Clock,
         render_manager: RenderManager,
     ) -> None:
-        self.clock = clock
-        self.render_manager = render_manager
+        self.clock: Clock = clock
+        self.render_manager: RenderManager = render_manager
 
     def run_final_screen(self, game_state: GameState) -> None:
         """Main loop for the final screen, displaying the final score and highscores.
@@ -51,7 +62,7 @@ class FinalScreen:
         high_scores: list[dict],
         new_high_score_index: int | None,
     ) -> None:
-        """Renders final score and top highscores.
+        """Renders final score and top highscores for the given number of levels.
 
         Args:
             game_state (GameState): The current state of the game.
@@ -59,9 +70,10 @@ class FinalScreen:
             new_high_score_index (int | None): Index of the new high score, if any.
         """
 
-        self.render_manager.render_background("very_light_gray")
+        # Background color
+        self.render_manager.render_background_color("very_light_gray")
 
-        # Final score
+        # Final score of the generated biomass
         self.render_manager.render_text(
             "Total biomass generated:",
             "title_font",
@@ -87,9 +99,6 @@ class FinalScreen:
         for i, entry in enumerate(high_scores):
             name = entry["name"]
             score = entry["score"]
-
-            # If it's the new high score, highlight it in blue
-            # If new_high_score_index is None, it will not highlight anything
             color = (
                 "blue"
                 if new_high_score_index is not None and i == new_high_score_index
@@ -103,7 +112,7 @@ class FinalScreen:
                 {"center": (0.5, 0.35 + i * 0.05)},
             )
 
-        # Prompt
+        # Message to return to main menu
         self.render_manager.render_text(
             "Press Enter to return to main menu!",
             "medium_font",
@@ -111,8 +120,4 @@ class FinalScreen:
             {"center": (0.5, 0.9)},
         )
 
-        # FPS info
-        self.render_manager.render_fps(game_state, self.clock, "small_font")
-
-        pygame.display.flip()
-        self.clock.tick(game_state.fps_maximum)
+        self.render_manager.update_screen(game_state, self.clock)

@@ -1,9 +1,19 @@
+"""Core module for the game state class.
+
+This module contains the GameState class, which manages the state of the game, including the
+configuration of hexagons, cells, and game settings.
+It also provides methods to reset the game state and manage the number of levels and cells.
+"""
+
+
 class GameState:
+    """Class to manage the game state."""
+
     def __init__(
         self,
     ):
         # Variables that are specific to each game run
-        self.default_number_levels: int = 5  # default number of levels in one run
+        self.default_number_levels: int = 5
 
         # Hexagon configs
         self.default_hexagon_minimal_radius_fraction: int = (
@@ -14,9 +24,7 @@ class GameState:
 
         # Cell configs
         self.default_number_cells: int = 1
-        self.default_cell_body_size: float = (
-            2 * self.default_hexagon_minimal_radius_fraction
-        )
+        self.default_cell_body_size: float = 2 * self.default_hexagon_minimal_radius_fraction
         self.default_cell_body_color: list[int] = [255, 255, 255]
         self.default_cell_division_threshold: float = 1
         self.default_cell_energy_consumption_rate_maximum: float = 0.05
@@ -25,7 +33,7 @@ class GameState:
         self.default_cell_energy_initial: float = 0.5
         self.default_cell_energy_variation: float = 0.2
 
-        # Game configs
+        # General game configs
         self.full_screen: bool = False
         self.default_user: str = "Unknown"
         self.fps_maximum: int = 50
@@ -34,15 +42,13 @@ class GameState:
         self.default_biomass_price: float = 100
         self.default_credits: float = 0.0
 
-        # Settings
-        self.max_number_levels: int = 10  # Maximum number of levels one can set
-        self.max_number_initial_cells: int = (
-            10  # Maximum number of initial cells one can set
-        )
+        # Settings configs
+        self.max_number_levels: int = 10
+        self.max_number_initial_cells: int = 10
 
         self.reset()
 
-    def reset(self):
+    def reset(self) -> None:
         """Resets the game state to its initial values."""
 
         # Game configs

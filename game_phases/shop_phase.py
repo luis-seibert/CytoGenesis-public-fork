@@ -1,3 +1,11 @@
+"""Game phase for the shop phase for upgrading the reactor and cells.
+
+This phase allows the player to buy upgrades for the reactor and cells and modify the game state
+accordingly. The player can select items from a shop and purchase them if they have enough credits.
+The items have different rarities and prices, which are calculated based on the current level of
+the game. The player can also see their current credits and the statistics of the reactor and cells.
+"""
+
 import os
 import random
 from typing import Any
@@ -5,28 +13,32 @@ from typing import Any
 import pygame
 from pygame.time import Clock
 
-from base_elements import event_handler
-from base_elements.game_state import GameState
-from base_elements.render_manager import RenderManager
-from base_elements.utils import get_config_from_yaml
+from core_modules import event_handler
+from core_modules.game_state import GameState
+from core_modules.render_manager import RenderManager
+from core_modules.utils import load_config_from_yaml
 
 
 class ShopPhase:
-    """Shop phase class that manages the shop phase of the game."""
+    """Shop phase class that manages the shop phase of the game.
+
+    Args:
+        clock (Clock): Pygame clock object for controlling the frame rate.
+        render_manager (RenderManager): Render manager object for rendering the game.
+    """
 
     def __init__(
         self,
         clock: Clock,
         render_manager: RenderManager,
     ) -> None:
-        self.clock = clock
-        self.render_manager = render_manager
+        self.clock: Clock = clock
+        self.render_manager: RenderManager = render_manager
 
-        self.selected_option = 0
+        self.selected_option: int = 0
         self.item_rarity_indices: list[int] = list(range(5))
-        self.item_stats: list[dict[str, Any]] = get_config_from_yaml(
-            os.path.join(os.getcwd(), "assets", "shop_items.yaml")
-        )
+
+        self.item_stats: list[dict[str, Any]] = self._load_item_stats()
 
     def run_shop_phase(self, game_state: GameState) -> GameState:
         """Shop phase to modify conditions for next iteration of the colonization phase.
@@ -38,9 +50,7 @@ class ShopPhase:
             GameState: Updated game state.
         """
 
-        item_rarity_probabilities = self._calculate_rarity_probabilities(
-            game_state.current_level
-        )
+        item_rarity_probabilities = self._calculate_rarity_probabilities(game_state.current_level)
         items_list = self._get_random_items(
             game_state.default_number_shop_items, item_rarity_probabilities
         )
@@ -60,15 +70,28 @@ class ShopPhase:
                     if self.selected_option == 0:  # Continue to next phase
                         return game_state
 
-                    if (
-                        items_list[self.selected_option - 1]["price"]
-                        <= game_state.current_credits
-                    ):
+                    if items_list[self.selected_option - 1]["price"] <= game_state.current_credits:
                         game_state, items_list = self._buy_item(
                             self.selected_option - 1, items_list, game_state
                         )
 
-            self.render_shop_phase(game_state, items_list)
+            self._render_shop_phase(game_state, items_list)
+
+    def _load_item_stats(self) -> list[dict[str, Any]]:
+        """Loads item statistics from a YAML file.
+
+        Returns:
+            list[dict[str, Any]]: List of item statistics.
+        """
+
+        item_stats_path = os.path.join(os.getcwd(), "assets", "configs", "shop_items.yaml")
+        item_stats = load_config_from_yaml(item_stats_path)
+        if not isinstance(item_stats, list) or not all(
+            isinstance(item, dict) for item in item_stats
+        ):
+            raise FileNotFoundError(f"Invalid item stats format in {item_stats_path}.")
+
+        return item_stats
 
     def _buy_item(
         self, item_index: int, items_list: list[dict[str, Any]], game_state: GameState
@@ -85,9 +108,7 @@ class ShopPhase:
         """
 
         item = items_list[item_index]
-        game_state.current_credits = round(
-            game_state.current_credits - item["price"], 2
-        )
+        game_state.current_credits = round(game_state.current_credits - item["price"], 2)
         variable_value = getattr(game_state, item["variable_name"])
         items_list.pop(item_index)
 
@@ -141,10 +162,8 @@ class ShopPhase:
         rarity_adjusted_items = []
         for item in random_items:
             item["rarity"] = random_items_rarities[random_items.index(item)]
-            item["modification_value"] = item["default_modification_value"] * (
-                item["rarity"] + 1
-            )
-            item["price"] = round(item["default_price"] * 2 * (item["rarity"] + 1))
+            item["modification_value"] = item["default_modification_value"] * (item["rarity"] + 1)
+            item["price"] = round(item["default_price"] * 3 * (item["rarity"] + 1))
             rarity_adjusted_items.append(item)
 
         return rarity_adjusted_items
@@ -156,9 +175,7 @@ class ShopPhase:
             current_level (int): Current level of the game.
         """
 
-        return [
-            (1 + current_level) / (1 + rarity**3) for rarity in self.item_rarity_indices
-        ]
+        return [(1 + current_level) / (1 + rarity**3) for rarity in self.item_rarity_indices]
 
     def _check_item_modification_validity_color(
         self,
@@ -179,27 +196,21 @@ class ShopPhase:
 
         if item["modification_type"] == "increase":
             if current_variable_value < item["maximum_value"]:
-                if (
-                    round(current_variable_value + item["modification_value"], 2)
-                    <= item["maximum_value"]
-                ):
+                new_variable_value = round(current_variable_value + item["modification_value"], 2)
+                if new_variable_value <= item["maximum_value"]:
                     return "green"
                 return "yellow"
             return "red"
 
         if item["modification_type"] == "decrease":
             if current_variable_value > item["minimum_value"]:
-                if (
-                    round(current_variable_value - item["modification_value"], 2)
-                    >= item["minimum_value"]
-                ):
+                new_variable_value = round(current_variable_value - item["modification_value"], 2)
+                if new_variable_value >= item["minimum_value"]:
                     return "green"
                 return "yellow"
             return "red"
 
-    def render_shop_phase(
-        self, game_state: GameState, items_list: list[dict[str, Any]]
-    ) -> None:
+    def _render_shop_phase(self, game_state: GameState, items_list: list[dict[str, Any]]) -> None:
         """Renders the shop phase.
 
         Args:
@@ -208,7 +219,7 @@ class ShopPhase:
         """
 
         # Background
-        self.render_manager.render_background("white")
+        self.render_manager.render_background_color("white")
 
         # Reactor background image
         self.render_manager.render_image(
@@ -217,16 +228,16 @@ class ShopPhase:
             size_args=("height", 0.9),
         )
 
-        # Stirrer animation
-        self.render_manager.render_animation(
+        # Reactor stirrer animation
+        self.render_manager.render_image_animation(
             image_name="reactor_stirrer",
             images_per_second=game_state.fps_maximum // 4,
             position_args={"center": (0.5, 0.5)},
             size_args=("height", 0.9),
         )
 
-        # Liquid animation
-        self.render_manager.render_animation(
+        # Reactor liquid animation
+        self.render_manager.render_image_animation(
             image_name="reactor_liquid",
             images_per_second=game_state.fps_maximum // 8,
             position_args={"center": (0.5, 0.5)},
@@ -236,7 +247,7 @@ class ShopPhase:
         # Shadow overlay
         self.render_manager.render_shadow_overlay(alpha=140)
 
-        # Shop computer image
+        # Shop stats display computer image
         self.render_manager.render_image(
             image_name="shop_computer_image",
             position_args={"bottomleft": (0, 1)},
@@ -291,9 +302,9 @@ class ShopPhase:
             )
         else:
             item_variable_name = None
-            highlight_color = "black"
+            highlight_color = "white"
 
-        # Render options/statistics
+        # Render current statistics with highlight
         self.render_manager.render_options_values(
             option_items=current_statistics,
             position_args={"topleft": (0.036, 0.33)},
@@ -301,7 +312,7 @@ class ShopPhase:
             font_name="small_font",
             distance_between_options=0.05,
             highlight_color=highlight_color,
-            option_color="black",
+            option_color="white",
         )
 
         # Title
@@ -320,26 +331,31 @@ class ShopPhase:
             position_args={"topright": (0.975, 0.5)},
         )
 
+        # Shop item box
+        self.render_manager.render_image(
+            image_name="item_box",
+            position_args={"topleft": (0.65, 0.575)},
+            size_args=("height", 0.25),
+        )
+
         # Shop items
         selected_item = selected_item_index if selected_item_index >= 0 else None
         self.render_manager.render_shop_items(
             shop_items=items_list,
             selected_item=selected_item,
-            font_name="large_font",
-            position_args={"topleft": (0.575, 0.6)},
-            distance_between_items=0.1,
+            font_name="medium_font",
+            position_args={"topleft": (0.675, 0.6)},
+            distance_between_items=0.065,
         )
 
         # Continue button
         self.render_manager.render_text(
             text="Start next batch",
             font_name="large_font",
-            font_color_name="light_gray",
+            font_color_name="black",
             position_args={"topright": (0.975, 0.4)},
             highlight=(self.selected_option == 0),
+            highlight_color="white",
         )
 
-        self.render_manager.render_fps(game_state, self.clock, "small_font")
-
-        pygame.display.flip()
-        self.clock.tick(game_state.fps_maximum)
+        self.render_manager.update_screen(game_state, self.clock)

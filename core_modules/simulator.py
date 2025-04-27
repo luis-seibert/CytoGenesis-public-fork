@@ -1,15 +1,24 @@
+"""Core module for simulating nutrient value updates of a hexagon.
+
+This module provides functionality to update the nutrient value of a hexagon based on the cell's
+energy consumption rate and nutrient affinity.
+It uses the Monod equation to calculate the nutrient uptake and ensures that the cell absorbs only
+as much nutrient as needed without exceeding the division threshold. The nutrient value is updated
+with mass preservation and the growth status of the cell is also updated accordingly.
+"""
+
 from numba import njit
 
 
 @njit
 def update_nutrient_value(
-    nutrient_value,
-    energy_value,
-    growth,
-    energy_consumption_rate_maximum,
-    energy_affinity,
-    division_threshold,
-):
+    nutrient_value: float,
+    energy_value: float,
+    growth: bool,
+    energy_consumption_rate_maximum: float,
+    energy_affinity: float,
+    division_threshold: float,
+) -> tuple[float, float, bool]:
     """Updates the nutrient value of the hexagon with mass preservation.
 
     The nutrient value is updated based on the cell's energy consumption rate and nutrient
@@ -25,16 +34,14 @@ def update_nutrient_value(
         division_threshold (float): The threshold for cell division.
 
     Returns:
-        tuple: Updated nutrient value, energy value, and growth status.
+        tuple: A tuple containing the updated nutrient value, energy value, and growth status.
     """
 
     if not growth or nutrient_value <= 0:
         return nutrient_value, energy_value, growth
 
     nutrient_uptake = (
-        energy_consumption_rate_maximum
-        * nutrient_value
-        / (nutrient_value + energy_affinity)
+        energy_consumption_rate_maximum * nutrient_value / (nutrient_value + energy_affinity)
     )
 
     nutrient_uptake = min(nutrient_uptake, nutrient_value)

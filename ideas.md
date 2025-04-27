@@ -9,7 +9,7 @@
 - scale game speed with number of cell growth cycles until all hex are full
 - add evolution system, mutation rate probability to produce mutations that can be used to buy cellular perks
 - change lab upgrade details, make more natural and intuitive
-    - maybe begin with 1 ring -> petri dish, upgrade to bioractor with capacity upgrades?
+    - maybe begin with 1 ring -> petri dish, upgrade to bioreactor with capacity upgrades?
 
 - display cultivation parameters (plot cultivation data during col phase)
     - add more complex simulation, growth rate, oxygen etc.
@@ -22,7 +22,7 @@
 ## FAR FUTURE:
 - emergency buttons for temporary bonus?
 
-- make lategame (after 10 or so rounds), add production of protein of interest, that gives different type of points that can be used for advanced upgrades
+- make late game (after 10 or so rounds), add production of protein of interest, that gives different type of points that can be used for advanced upgrades
 - Add tech tree for lab devices, cell line
 - add meta progression: ?
 - add compendium to main menu, "Basics of bioprocess engineering" - that explain most important mechanics
@@ -43,7 +43,7 @@
 ### FAR FUTURE:
 - different strains with unique appearance and traits
 - perks have different qualities (common, rare, etc.)
-- perks have "set boni", synergies
+- perks have "set bonuses", and or synergies
 
 ## Improve user experience
 - implement nice background/overlay for microscope/over
@@ -55,7 +55,6 @@
 - game stage durations need to be fine tuned to make fun
 - add sounds
 
-
 ## Current Roadmap:
 - Implement plotting of process parameters
-- make shop prettier
+- make reroll for shop items

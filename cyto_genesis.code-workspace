@@ -15,15 +15,36 @@
 			"--line-length=100"
 		],
 		"python.analysis.typeCheckingMode": "standard",
+		"cSpell.words": [
+			"axvline",
+			"blit",
+			"borderpad",
+			"centerx",
+			"edgecolor",
+			"facecolor",
+			"fancybox",
+			"figsize",
+			"fontsize",
+			"framealpha",
+			"labelcolor",
+			"labelsize",
+			"linestyle",
+			"markersize",
+			"markevery",
+			"twinx",
+			"xlabel",
+			"ylabel"
+		],
 	},
 	"launch": {
 		"version": "0.2.0",
 		"configurations": [
 			{
-				"name": "Run CytoGenesis Debug",
+				"name": "Run CytoGenesis",
 				"type": "debugpy",
 				"request": "launch",
-				"module": "start_game",
+				"program": "${workspaceFolder}/main.py",
+				// "console": "integratedTerminal",
 				"justMyCode": false,
 			}
 		]

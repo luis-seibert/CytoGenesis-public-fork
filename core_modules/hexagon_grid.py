@@ -99,6 +99,15 @@ class HexagonGrid:
         for hexagon in self.hexagons.values():
             hexagon.vertices = self._get_hexagon_vertices(hexagon.coordinate_axial)
 
+    def get_total_nutrient(self) -> float:
+        """Get the total nutrient remaining in all hexagons.
+
+        Returns:
+            float: The total nutrient value across all hexagons.
+        """
+
+        return sum(hexagon.nutrient_value for hexagon in self.hexagons.values())
+
     def _update_size_parameters(
         self,
         screen_size: tuple[int, int],

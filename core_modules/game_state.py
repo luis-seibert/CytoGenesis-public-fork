@@ -27,8 +27,8 @@ class GameState:
         self.default_cell_body_size: float = 2 * self.default_hexagon_minimal_radius_fraction
         self.default_cell_body_color: list[int] = [255, 255, 255]
         self.default_cell_division_threshold: float = 1
-        self.default_cell_energy_consumption_rate_maximum: float = 0.05
-        self.default_cell_energy_affinity: float = 0.02
+        self.default_cell_energy_consumption_rate_maximum: float = 0.025
+        self.default_cell_energy_affinity: float = 0.3
         self.default_cell_energy_color_index: int = 1
         self.default_cell_energy_initial: float = 0.5
         self.default_cell_energy_variation: float = 0.2

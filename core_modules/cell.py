@@ -21,6 +21,8 @@ class Cell:
         game_state (GameState): The game state containing the current game parameters.
         hexagon_minimal_radius (int): The minimal radius of the hexagon.
         screen_size (tuple[int, int]): The size of the screen.
+        center_offset (tuple[float, float], optional): Custom center point as fractions of screen
+            size. Defaults to (0.5, 0.5).
     """
 
     def __init__(
@@ -29,10 +31,12 @@ class Cell:
         game_state: GameState,
         hexagon_minimal_radius: int,
         screen_size: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
     ):
         self.coordinate_axial = coordinate_axial
+        self.center_offset = center_offset
         self.coordinate_pixel = self.calculate_pixel_position(
-            screen_size, hexagon_minimal_radius, coordinate_axial
+            screen_size, hexagon_minimal_radius, coordinate_axial, center_offset
         )
         self.growth = True
 
@@ -63,6 +67,7 @@ class Cell:
         screen_size: tuple[int, int],
         hexagon_minimal_radius: int,
         coordinate_axial: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
     ) -> tuple[int, int]:
         """Calculate the pixel position of the cell based on its axial coordinates.
 
@@ -70,6 +75,8 @@ class Cell:
             screen_size (tuple[int, int]): The size of the screen.
             hexagon_minimal_radius (int): The minimal radius of the hexagon.
             coordinate_axial (tuple[int, int]): The axial coordinates of the cell.
+            center_offset (tuple[float, float], optional): Custom center point as fractions of
+                screen size. Defaults to (0.5, 0.5).
 
         Returns:
             tuple[int, int]: The pixel position of the cell on the screen.
@@ -78,8 +85,8 @@ class Cell:
         offset = calculate_pixel_from_axial((0, 0), hexagon_minimal_radius, coordinate_axial)
 
         return (
-            round(screen_size[0] // 2) + offset[0],
-            round(screen_size[1] // 2) + offset[1],
+            round(screen_size[0] * center_offset[0]) + offset[0],
+            round(screen_size[1] * center_offset[1]) + offset[1],
         )
 
     def _calculate_randomized_energy_value(

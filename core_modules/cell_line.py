@@ -24,6 +24,8 @@ class CellLine:
         hexagon_grid (HexagonGrid): The hexagonal grid containing the cells.
         game_state (GameState): The game state containing the current game parameters.
         screen_size (tuple[int, int]): The size of the screen.
+        center_offset (tuple[float, float], optional): Custom center point as fractions of screen
+            size. Defaults to (0.5, 0.5).
     """
 
     def __init__(
@@ -31,8 +33,10 @@ class CellLine:
         hexagon_grid: HexagonGrid,
         game_state: GameState,
         screen_size: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
     ) -> None:
-        self.cells = self._create_cells(hexagon_grid, game_state, screen_size)
+        self.center_offset = center_offset
+        self.cells = self._create_cells(hexagon_grid, game_state, screen_size, center_offset)
 
     def replicate_cell(
         self,
@@ -67,6 +71,7 @@ class CellLine:
                 game_state,
                 hexagon_grid.minimal_radius,
                 screen_size,
+                self.center_offset,
             )
 
             self.cells[cell_coordinate].energy_value /= 2
@@ -94,6 +99,7 @@ class CellLine:
         hexagon_grid: HexagonGrid,
         game_state: GameState,
         screen_size: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
     ) -> dict[tuple[int, int], Cell]:
         """Creates a cell line on given hexagon grid.
 
@@ -101,6 +107,8 @@ class CellLine:
             hexagon_grid (HexagonGrid): The hexagonal grid to create cells on.
             game_state (GameState): The game state containing the current game parameters.
             screen_size (tuple[int, int]): The size of the screen.
+            center_offset (tuple[float, float], optional): Custom center point as fractions of
+                screen size. Defaults to (0.5, 0.5).
 
         Returns:
             dict[tuple[int, int], Cell]: A dictionary of cells with their coordinates as keys.
@@ -111,7 +119,9 @@ class CellLine:
 
         cells = {}
         for i in range(number_cells):
-            cell = Cell(coordinates[i], game_state, hexagon_grid.minimal_radius, screen_size)
+            cell = Cell(
+                coordinates[i], game_state, hexagon_grid.minimal_radius, screen_size, center_offset
+            )
             cell.energy_consumption_rate_maximum = self._scale_energy_consumption_rate(
                 game_state.cell_energy_consumption_rate_maximum,
                 game_state.current_level,

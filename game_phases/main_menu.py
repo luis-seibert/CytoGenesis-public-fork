@@ -43,6 +43,9 @@ class MainMenu:
         self.render_manager: RenderManager = render_manager
 
         self.hexagon_grid = HexagonGrid(self.game_state, self.render_manager.current_screen_size)
+        self.hexagon_grid._update_size_parameters(
+            self.render_manager.current_screen_size, radius_fraction=20
+        )
         self.hexagon_grid.hexagons = self._create_background_hexagon_grid()
 
         self.settings_menu: SettingsMenu = SettingsMenu(
@@ -114,8 +117,8 @@ class MainMenu:
         """
 
         screen_width, screen_height = self.render_manager.current_screen_size
-        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 20
-        number_q_hexagons = round(screen_height / self.hexagon_grid.minimal_radius / 2) + 5
+        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 9
+        number_q_hexagons = round(screen_height / self.hexagon_grid.minimal_radius / 2) + 4
 
         coordinates = []
         r_offset = -round(number_r_hexagons / 2)

@@ -38,7 +38,9 @@ class HexagonGrid:
         screen_size: tuple[int, int],
         center_offset: tuple[float, float] = (0.5, 0.5),
     ) -> None:
-        self._update_size_parameters(screen_size, game_state, center_offset)
+        self._update_size_parameters(
+            screen_size, game_state.default_hexagon_minimal_radius_fraction, center_offset
+        )
         self.default_hexagon_body_color = list(Colors().hexagon_body)
         self.hexagons = self._create_hexagon_ring(
             game_state.current_level,
@@ -94,7 +96,9 @@ class HexagonGrid:
                 screen size. Defaults to (0.5, 0.5).
         """
 
-        self._update_size_parameters(screen_size, game_state, center_offset)
+        self._update_size_parameters(
+            screen_size, game_state.default_hexagon_minimal_radius_fraction, center_offset
+        )
 
         for hexagon in self.hexagons.values():
             hexagon.vertices = self._get_hexagon_vertices(hexagon.coordinate_axial)
@@ -111,7 +115,7 @@ class HexagonGrid:
     def _update_size_parameters(
         self,
         screen_size: tuple[int, int],
-        game_state: GameState,
+        radius_fraction: int,
         center_offset: tuple[float, float] = (0.5, 0.5),
     ) -> None:
         """Updates the size parameters of the hexagonal grid based on the screen size.
@@ -127,9 +131,7 @@ class HexagonGrid:
             round(screen_size[0] * center_offset[0]),
             round(screen_size[1] * center_offset[1]),
         )
-        self.minimal_radius = round(
-            round(screen_size[1] // game_state.default_hexagon_minimal_radius_fraction)
-        )
+        self.minimal_radius = round(round(screen_size[1] // radius_fraction))
         self.maximal_radius = round(self.minimal_radius / (math.sqrt(3) / 2))
 
     def _create_hexagon_ring(

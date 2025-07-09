@@ -103,6 +103,42 @@ class HexagonGrid:
         for hexagon in self.hexagons.values():
             hexagon.vertices = self._get_hexagon_vertices(hexagon.coordinate_axial)
 
+    def recreate_background_hexagon_grid(
+        self, game_state: GameState, screen_size: tuple[int, int], radius_fraction: int = 20
+    ) -> None:
+        """Recreate the hexagon grid for background use (like main menu).
+
+        Args:
+            game_state (GameState): The game state containing the current game parameters.
+            screen_size (tuple[int, int]): The screen size.
+            radius_fraction (int): The radius fraction for hexagon size. Defaults to 20.
+        """
+
+        original_radius = game_state.default_hexagon_minimal_radius_fraction
+        game_state.default_hexagon_minimal_radius_fraction = radius_fraction
+        self._update_size_parameters(screen_size, radius_fraction)
+
+        screen_width, screen_height = screen_size
+        number_r_hexagons = round(screen_width / self.maximal_radius / 2) + 9
+        number_q_hexagons = round(screen_height / self.minimal_radius / 2) + 4
+
+        coordinates = []
+        r_offset = -round(number_r_hexagons / 2)
+        q_offset = -round(number_q_hexagons / 2)
+        for r in range(number_r_hexagons):
+            for q in range(number_q_hexagons):
+                coordinates.append((r_offset + r, q_offset + q))
+
+        self.hexagons = {}
+        for coordinate in coordinates:
+            self.hexagons[coordinate] = self.create_hexagon(
+                coordinate,
+                game_state.hexagon_nutrient_variation,
+                game_state.hexagon_nutrient_richness,
+            )
+
+        game_state.default_hexagon_minimal_radius_fraction = original_radius
+
     def get_total_nutrient(self) -> float:
         """Get the total nutrient remaining in all hexagons.
 

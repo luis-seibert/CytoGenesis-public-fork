@@ -45,7 +45,7 @@ class MainMenu:
 
         self.hexagon_grid = HexagonGrid(self.game_state, self.render_manager.current_screen_size)
         self.hexagon_grid._update_size_parameters(
-            self.render_manager.current_screen_size, radius_fraction=20
+            self.render_manager.current_screen_size, radius_fraction=15
         )
         self.hexagon_grid.hexagons = self._create_background_hexagon_grid()
 
@@ -70,11 +70,16 @@ class MainMenu:
         self.menu_options: list[str] = ["Start Game", "Change Name", "Settings", "Quit"]
         self.selected_option: int = 0
         self.player_name: str = load_player_name() or self._prompt_for_name()
+        self.last_screen_size: tuple[int, int] = self.render_manager.current_screen_size
 
     def run_main_menu(self) -> None:
         """Run main menu with options to choose from."""
 
         while True:
+            if self.render_manager.current_screen_size != self.last_screen_size:
+                self._update_hexagon_grid_for_new_screen_size()
+                self.last_screen_size = self.render_manager.current_screen_size
+
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
 
@@ -91,11 +96,22 @@ class MainMenu:
                         save_player_name(self.player_name)
                     elif self.selected_option == 2:  # Settings menu
                         self.game_state = self.settings_menu.run_settings_menu(self.game_state)
+                        # Force update hexagon grid in case screen size changed in settings
+                        if self.render_manager.current_screen_size != self.last_screen_size:
+                            self._update_hexagon_grid_for_new_screen_size()
+                            self.last_screen_size = self.render_manager.current_screen_size
                     elif self.selected_option == 3:  # Quit game
                         pygame.quit()
                         sys.exit()
 
             self._render_main_menu()
+
+    def _update_hexagon_grid_for_new_screen_size(self) -> None:
+        """Update the hexagon grid when screen size changes (e.g., fullscreen toggle)."""
+
+        self.hexagon_grid.recreate_background_hexagon_grid(
+            self.game_state, self.render_manager.current_screen_size, radius_fraction=15
+        )
 
     def _start_game(self):
         """Start the game and iterate over colonization and shop phases."""
@@ -130,8 +146,8 @@ class MainMenu:
         """
 
         screen_width, screen_height = self.render_manager.current_screen_size
-        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 9
-        number_q_hexagons = round(screen_height / self.hexagon_grid.minimal_radius / 2) + 4
+        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 10
+        number_q_hexagons = round(screen_height / self.hexagon_grid.minimal_radius / 2) + 5
 
         coordinates = []
         r_offset = -round(number_r_hexagons / 2)

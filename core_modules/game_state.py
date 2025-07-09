@@ -34,7 +34,7 @@ class GameState:
         self.default_cell_energy_variation: float = 0.2
 
         # General game configs
-        self.full_screen: bool = False
+        self.full_screen: bool = True
         self.default_user: str = "Unknown"
         self.fps_maximum: int = 50
         self.show_fps: bool = False

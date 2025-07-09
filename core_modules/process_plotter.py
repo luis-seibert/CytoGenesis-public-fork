@@ -5,6 +5,7 @@ import os
 import matplotlib.backends.backend_agg as agg
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import pygame
 
 from core_modules.process_tracker import ProcessTracker
@@ -269,12 +270,16 @@ class ProcessPlotter:
         return downsampled_data
 
     def _configure_axis_fonts(self, ax, tick_label_size: int = 10) -> None:
-        """Configure pixel font for axis tick labels.
+        """Configure pixel font for axis tick labels and format to show one decimal place.
 
         Args:
             ax: The matplotlib axis object.
             tick_label_size (int): Size of tick labels.
         """
+
+        # Set up formatters to always show one decimal place
+        ax.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.1f"))
+        ax.xaxis.set_major_formatter(ticker.FormatStrFormatter("%.1f"))
 
         for label in ax.get_xticklabels():
             label.set_fontfamily(self.font_family)

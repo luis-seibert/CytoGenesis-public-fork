@@ -17,9 +17,10 @@ from core_modules.hexagon_grid import HexagonGrid
 from core_modules.hexagon_tile import HexagonTile
 from core_modules.player_data_manager import load_player_name, save_player_name
 from core_modules.render_manager import RenderManager
-from game_phases.colonization_phase import ColonizationPhase
+from game_phases.colonization_phase import ColonizationPhase, ReturnToMainMenuException
 from game_phases.final_screen import FinalScreen
 from game_phases.settings_menu import SettingsMenu
+from game_phases.shop_phase import ReturnToMainMenuException as ShopReturnToMainMenuException
 from game_phases.shop_phase import ShopPhase
 
 
@@ -43,6 +44,9 @@ class MainMenu:
         self.render_manager: RenderManager = render_manager
 
         self.hexagon_grid = HexagonGrid(self.game_state, self.render_manager.current_screen_size)
+        self.hexagon_grid._update_size_parameters(
+            self.render_manager.current_screen_size, radius_fraction=15
+        )
         self.hexagon_grid.hexagons = self._create_background_hexagon_grid()
 
         self.settings_menu: SettingsMenu = SettingsMenu(
@@ -51,10 +55,12 @@ class MainMenu:
         self.colonization_phase: ColonizationPhase = ColonizationPhase(
             self.clock,
             self.render_manager,
+            self.hexagon_grid,
         )
         self.shop_phase: ShopPhase = ShopPhase(
             self.clock,
             self.render_manager,
+            self.hexagon_grid,
         )
         self.final_screen: FinalScreen = FinalScreen(
             self.clock,
@@ -64,11 +70,16 @@ class MainMenu:
         self.menu_options: list[str] = ["Start Game", "Change Name", "Settings", "Quit"]
         self.selected_option: int = 0
         self.player_name: str = load_player_name() or self._prompt_for_name()
+        self.last_screen_size: tuple[int, int] = self.render_manager.current_screen_size
 
     def run_main_menu(self) -> None:
         """Run main menu with options to choose from."""
 
         while True:
+            if self.render_manager.current_screen_size != self.last_screen_size:
+                self._update_hexagon_grid_for_new_screen_size()
+                self.last_screen_size = self.render_manager.current_screen_size
+
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
 
@@ -85,26 +96,47 @@ class MainMenu:
                         save_player_name(self.player_name)
                     elif self.selected_option == 2:  # Settings menu
                         self.game_state = self.settings_menu.run_settings_menu(self.game_state)
+                        # Force update hexagon grid in case screen size changed in settings
+                        if self.render_manager.current_screen_size != self.last_screen_size:
+                            self._update_hexagon_grid_for_new_screen_size()
+                            self.last_screen_size = self.render_manager.current_screen_size
                     elif self.selected_option == 3:  # Quit game
                         pygame.quit()
                         sys.exit()
 
             self._render_main_menu()
 
+    def _update_hexagon_grid_for_new_screen_size(self) -> None:
+        """Update the hexagon grid when screen size changes (e.g., fullscreen toggle)."""
+
+        self.hexagon_grid.recreate_background_hexagon_grid(
+            self.game_state, self.render_manager.current_screen_size, radius_fraction=15
+        )
+
     def _start_game(self):
         """Start the game and iterate over colonization and shop phases."""
 
         self.game_state.reset()
 
-        for iteration in range(self.game_state.number_levels):
-            self.game_state.current_level = iteration
-            self.colonization_phase.run_colonization_phase(
-                self.game_state,
-            )
-            if iteration < self.game_state.number_levels - 1:
-                self.game_state = self.shop_phase.run_shop_phase(self.game_state)
+        try:
+            for iteration in range(self.game_state.number_levels):
+                self.game_state.current_level = iteration
+                try:
+                    self.colonization_phase.run_colonization_phase(
+                        self.game_state,
+                    )
+                except ReturnToMainMenuException:
+                    return
 
-        self.final_screen.run_final_screen(self.game_state)
+                if iteration < self.game_state.number_levels - 1:
+                    try:
+                        self.game_state = self.shop_phase.run_shop_phase(self.game_state)
+                    except ShopReturnToMainMenuException:
+                        return
+
+            self.final_screen.run_final_screen(self.game_state)
+        except (ReturnToMainMenuException, ShopReturnToMainMenuException):
+            return
 
     def _create_background_hexagon_grid(self) -> dict[tuple[int, int], HexagonTile]:
         """Create a grid of hexagons for the main menu.
@@ -114,7 +146,7 @@ class MainMenu:
         """
 
         screen_width, screen_height = self.render_manager.current_screen_size
-        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 20
+        number_r_hexagons = round(screen_width / self.hexagon_grid.maximal_radius / 2) + 10
         number_q_hexagons = round(screen_height / self.hexagon_grid.minimal_radius / 2) + 5
 
         coordinates = []
@@ -212,6 +244,14 @@ class MainMenu:
             "small_font",
             "white",
             {"topleft": (0.02, 0.06)},
+        )
+
+        # Game controls instruction
+        self.render_manager.render_text(
+            "Use arrow keys to navigate, Enter to select, Escape to pause",
+            "small_font",
+            "white",
+            {"center": (0.5, 0.85)},
         )
 
         self.render_manager.update_screen(self.game_state, self.clock)

@@ -28,17 +28,26 @@ class HexagonGrid:
     Args:
         game_state (GameState): The game state containing the current game parameters.
         screen_size (tuple[int, int]): The size of the screen.
+        center_offset (tuple[float, float], optional): Custom center point as fractions of screen
+            size. Defaults to (0.5, 0.5).
     """
 
-    def __init__(self, game_state: GameState, screen_size: tuple[int, int]) -> None:
-        self._update_size_parameters(screen_size, game_state)
+    def __init__(
+        self,
+        game_state: GameState,
+        screen_size: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
+    ) -> None:
+        self._update_size_parameters(
+            screen_size, game_state.default_hexagon_minimal_radius_fraction, center_offset
+        )
         self.default_hexagon_body_color = list(Colors().hexagon_body)
         self.hexagons = self._create_hexagon_ring(
             game_state.current_level,
             game_state.hexagon_nutrient_variation,
             game_state.hexagon_nutrient_richness,
         )
-        self.update_hexagon_vertices(game_state, screen_size)
+        self.update_hexagon_vertices(game_state, screen_size, center_offset)
 
     def create_hexagon(
         self, axial_coordinate, nutrient_variation: float, nutrient_richness: float
@@ -72,34 +81,93 @@ class HexagonGrid:
             self.default_hexagon_body_color,
         )
 
-    def update_hexagon_vertices(self, game_state: GameState, screen_size: tuple[int, int]) -> None:
+    def update_hexagon_vertices(
+        self,
+        game_state: GameState,
+        screen_size: tuple[int, int],
+        center_offset: tuple[float, float] = (0.5, 0.5),
+    ) -> None:
         """Updates the vertices of all hexagons in the grid based on the new screen size.
 
         Args:
             game_state (GameState): The game state containing the current game parameters.
             screen_size (tuple[int, int]): The new screen size.
+            center_offset (tuple[float, float], optional): Custom center point as fractions of
+                screen size. Defaults to (0.5, 0.5).
         """
 
-        self._update_size_parameters(screen_size, game_state)
+        self._update_size_parameters(
+            screen_size, game_state.default_hexagon_minimal_radius_fraction, center_offset
+        )
 
         for hexagon in self.hexagons.values():
             hexagon.vertices = self._get_hexagon_vertices(hexagon.coordinate_axial)
 
-    def _update_size_parameters(self, screen_size: tuple[int, int], game_state: GameState) -> None:
+    def recreate_background_hexagon_grid(
+        self, game_state: GameState, screen_size: tuple[int, int], radius_fraction: int = 20
+    ) -> None:
+        """Recreate the hexagon grid for background use (like main menu).
+
+        Args:
+            game_state (GameState): The game state containing the current game parameters.
+            screen_size (tuple[int, int]): The screen size.
+            radius_fraction (int): The radius fraction for hexagon size. Defaults to 20.
+        """
+
+        original_radius = game_state.default_hexagon_minimal_radius_fraction
+        game_state.default_hexagon_minimal_radius_fraction = radius_fraction
+        self._update_size_parameters(screen_size, radius_fraction)
+
+        screen_width, screen_height = screen_size
+        number_r_hexagons = round(screen_width / self.maximal_radius / 2) + 9
+        number_q_hexagons = round(screen_height / self.minimal_radius / 2) + 4
+
+        coordinates = []
+        r_offset = -round(number_r_hexagons / 2)
+        q_offset = -round(number_q_hexagons / 2)
+        for r in range(number_r_hexagons):
+            for q in range(number_q_hexagons):
+                coordinates.append((r_offset + r, q_offset + q))
+
+        self.hexagons = {}
+        for coordinate in coordinates:
+            self.hexagons[coordinate] = self.create_hexagon(
+                coordinate,
+                game_state.hexagon_nutrient_variation,
+                game_state.hexagon_nutrient_richness,
+            )
+
+        game_state.default_hexagon_minimal_radius_fraction = original_radius
+
+    def get_total_nutrient(self) -> float:
+        """Get the total nutrient remaining in all hexagons.
+
+        Returns:
+            float: The total nutrient value across all hexagons.
+        """
+
+        return sum(hexagon.nutrient_value for hexagon in self.hexagons.values())
+
+    def _update_size_parameters(
+        self,
+        screen_size: tuple[int, int],
+        radius_fraction: int,
+        center_offset: tuple[float, float] = (0.5, 0.5),
+    ) -> None:
         """Updates the size parameters of the hexagonal grid based on the screen size.
 
         Args:
             screen_size (tuple[int, int]): The size of the screen.
             game_state (GameState): The game state containing the current game parameters.
+            center_offset (tuple[float, float], optional): Custom center point as fractions of
+                screen size. Defaults to (0.5, 0.5).
         """
 
         self.screen_center_pixel = (
-            round(screen_size[0] // 2),
-            round(screen_size[1] // 2),
+            round(screen_size[0] * center_offset[0]),
+            round(screen_size[1] * center_offset[1]),
         )
-        self.minimal_radius = round(
-            round(screen_size[1] // game_state.default_hexagon_minimal_radius_fraction)
-        )
+        self.minimal_radius = round(round(screen_size[1] // radius_fraction))
         self.maximal_radius = round(self.minimal_radius / (math.sqrt(3) / 2))
 
     def _create_hexagon_ring(

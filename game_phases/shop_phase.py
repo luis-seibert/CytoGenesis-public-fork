@@ -8,6 +8,7 @@ the game. The player can also see their current credits and the statistics of th
 
 import os
 import random
+import sys
 from typing import Any
 
 import pygame
@@ -17,6 +18,11 @@ from core_modules import event_handler
 from core_modules.game_state import GameState
 from core_modules.render_manager import RenderManager
 from core_modules.utils import load_config_from_yaml
+from game_phases.escape_menu import EscapeMenu, EscapeMenuResult
+
+
+class ReturnToMainMenuException(Exception):
+    """Exception raised when the user wants to return to the main menu."""
 
 
 class ShopPhase:
@@ -31,14 +37,17 @@ class ShopPhase:
         self,
         clock: Clock,
         render_manager: RenderManager,
+        background_hexagon_grid,
     ) -> None:
         self.clock: Clock = clock
         self.render_manager: RenderManager = render_manager
+        self.background_hexagon_grid = background_hexagon_grid
 
         self.selected_option: int = 0
         self.item_rarity_indices: list[int] = list(range(5))
 
         self.item_stats: list[dict[str, Any]] = self._load_item_stats()
+        self.escape_menu: EscapeMenu | None = None
 
     def run_shop_phase(self, game_state: GameState) -> GameState:
         """Shop phase to modify conditions for next iteration of the colonization phase.
@@ -56,9 +65,22 @@ class ShopPhase:
         )
         self.selected_option = 0
 
+        if self.escape_menu is None:
+            self.escape_menu = EscapeMenu(
+                self.clock, self.render_manager, self.background_hexagon_grid
+            )
+
         while True:
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
+
+                if event_handler.handle_escape(event):
+                    result = self.escape_menu.show_escape_menu(game_state)
+                    if result == EscapeMenuResult.MAIN_MENU:
+                        raise ReturnToMainMenuException()
+                    elif result == EscapeMenuResult.QUIT:
+                        pygame.quit()
+                        sys.exit()
 
                 self.selected_option = event_handler.handle_option_navigation(
                     event,

@@ -80,8 +80,8 @@ class SettingsMenu:
                     )
                     if self.full_screen_toggled:
                         self.render_manager.toggle_full_screen(game_state.full_screen)
-                        self.hexagon_grid.update_hexagon_vertices(
-                            game_state, self.render_manager.current_screen_size
+                        self.hexagon_grid.recreate_background_hexagon_grid(
+                            game_state, self.render_manager.current_screen_size, radius_fraction=15
                         )
                         self.full_screen_toggled = False
                     if event_handler.handle_escape(event):

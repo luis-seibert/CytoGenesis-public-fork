@@ -463,3 +463,80 @@ class RenderManager:
                 position_args=item_position,
                 highlight=i == selected_item,
             )
+
+    def render_plot_surface(
+        self,
+        plot_surface: pygame.Surface,
+        cached_position: tuple[int, int] | None,
+        cached_size: tuple[int, int] | None,
+        max_width_fraction: float = 0.50,
+        max_height_fraction: float = 0.85,
+        margin: int = 30,
+        border_padding: int = 8,
+        background_color: tuple[int, int, int] = (255, 255, 255),
+        border_color: tuple[int, int, int] = (60, 60, 80),
+    ) -> tuple[tuple[int, int], tuple[int, int], pygame.Surface]:
+        """Render a plot surface with automatic positioning, scaling, and caching.
+
+        Args:
+            plot_surface (pygame.Surface): The plot surface to render.
+            cached_position (tuple[int, int] | None): Previously cached position.
+            cached_size (tuple[int, int] | None): Previously cached size.
+            max_width_fraction (float): Maximum width as fraction of screen width.
+            max_height_fraction (float): Maximum height as fraction of screen height.
+            margin (int): Margin from screen edge.
+            border_padding (int): Padding around the plot for border.
+            background_color (tuple[int, int, int]): Background color for the plot.
+            border_color (tuple[int, int, int]): Border color for the plot.
+
+        Returns:
+            tuple: (new_position, new_size, scaled_surface) for caching.
+        """
+
+        if not plot_surface:
+            return cached_position, cached_size, plot_surface
+
+        screen_width, screen_height = self.current_screen_size
+        current_plot_width = plot_surface.get_width()
+        current_plot_height = plot_surface.get_height()
+
+        if (
+            cached_position is None
+            or cached_size is None
+            or cached_size != (current_plot_width, current_plot_height)
+        ):
+
+            max_width = int(screen_width * max_width_fraction)
+            max_height = int(screen_height * max_height_fraction)
+
+            scale_factor = min(
+                max_width / current_plot_width, max_height / current_plot_height, 1.0
+            )
+            final_width = int(current_plot_width * scale_factor)
+            final_height = int(current_plot_height * scale_factor)
+
+            plot_x = screen_width - final_width - margin
+            plot_y = int((screen_height - final_height) / 2)
+
+            cached_position = (plot_x, plot_y)
+            cached_size = (final_width, final_height)
+
+            if scale_factor < 1.0:
+                plot_surface = pygame.transform.scale(plot_surface, (final_width, final_height))
+
+        plot_x, plot_y = cached_position
+        plot_width, plot_height = cached_size
+
+        bg_surface = pygame.Surface((plot_width + border_padding, plot_height + border_padding))
+        bg_surface.fill(background_color)
+
+        border_surface = pygame.Surface(
+            (plot_width + border_padding * 2, plot_height + border_padding * 2)
+        )
+        border_surface.fill(border_color)
+
+        self.screen.blit(border_surface, (plot_x - border_padding, plot_y - border_padding))
+        self.screen.blit(bg_surface, (plot_x - border_padding // 2, plot_y - border_padding // 2))
+        self.screen.blit(plot_surface, (plot_x, plot_y))
+
+        return cached_position, cached_size, plot_surface

@@ -2,6 +2,7 @@ astroid==3.3.9
 dill==0.4.0
 isort==6.0.1
 llvmlite==0.44.0
+matplotlib==3.8.2
 mccabe==0.7.0
 numba==0.61.2
 numpy==1.26.4

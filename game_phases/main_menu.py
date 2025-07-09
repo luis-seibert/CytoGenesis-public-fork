@@ -217,4 +217,12 @@ class MainMenu:
             {"topleft": (0.02, 0.06)},
         )
 
+        # Game controls instruction
+        self.render_manager.render_text(
+            "Use arrow keys to navigate, Enter to select, Escape to pause",
+            "small_font",
+            "white",
+            {"center": (0.5, 0.85)},
+        )
+
         self.render_manager.update_screen(self.game_state, self.clock)

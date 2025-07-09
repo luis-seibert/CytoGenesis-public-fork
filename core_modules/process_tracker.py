@@ -21,6 +21,22 @@ class ProcessTracker:
         self.previous_biomass: float = 0.0
         self.previous_time: float = 0.0
 
+        self.is_paused: bool = False
+        self.pause_start_time: float = 0.0
+        self.total_pause_duration: float = 0.0
+
+    def pause(self) -> None:
+        """Pause the process tracker."""
+        if not self.is_paused:
+            self.is_paused = True
+            self.pause_start_time = time.time()
+
+    def resume(self) -> None:
+        """Resume the process tracker."""
+        if self.is_paused:
+            self.is_paused = False
+            self.total_pause_duration += time.time() - self.pause_start_time
+
     def update(self, cell_line: CellLine, hexagon_grid: HexagonGrid) -> None:
         """Update the tracked parameters with current game state.
 
@@ -29,7 +45,10 @@ class ProcessTracker:
             hexagon_grid (HexagonGrid): The hexagon grid containing nutrient data.
         """
 
-        current_time = time.time() - self.start_time
+        if self.is_paused:
+            return
+
+        current_time = time.time() - self.start_time - self.total_pause_duration
         current_biomass = cell_line.get_biomass()
 
         self.timestamps.append(current_time)

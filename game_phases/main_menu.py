@@ -17,9 +17,10 @@ from core_modules.hexagon_grid import HexagonGrid
 from core_modules.hexagon_tile import HexagonTile
 from core_modules.player_data_manager import load_player_name, save_player_name
 from core_modules.render_manager import RenderManager
-from game_phases.colonization_phase import ColonizationPhase
+from game_phases.colonization_phase import ColonizationPhase, ReturnToMainMenuException
 from game_phases.final_screen import FinalScreen
 from game_phases.settings_menu import SettingsMenu
+from game_phases.shop_phase import ReturnToMainMenuException as ShopReturnToMainMenuException
 from game_phases.shop_phase import ShopPhase
 
 
@@ -54,10 +55,12 @@ class MainMenu:
         self.colonization_phase: ColonizationPhase = ColonizationPhase(
             self.clock,
             self.render_manager,
+            self.hexagon_grid,
         )
         self.shop_phase: ShopPhase = ShopPhase(
             self.clock,
             self.render_manager,
+            self.hexagon_grid,
         )
         self.final_screen: FinalScreen = FinalScreen(
             self.clock,
@@ -99,15 +102,25 @@ class MainMenu:
 
         self.game_state.reset()
 
-        for iteration in range(self.game_state.number_levels):
-            self.game_state.current_level = iteration
-            self.colonization_phase.run_colonization_phase(
-                self.game_state,
-            )
-            if iteration < self.game_state.number_levels - 1:
-                self.game_state = self.shop_phase.run_shop_phase(self.game_state)
+        try:
+            for iteration in range(self.game_state.number_levels):
+                self.game_state.current_level = iteration
+                try:
+                    self.colonization_phase.run_colonization_phase(
+                        self.game_state,
+                    )
+                except ReturnToMainMenuException:
+                    return
 
-        self.final_screen.run_final_screen(self.game_state)
+                if iteration < self.game_state.number_levels - 1:
+                    try:
+                        self.game_state = self.shop_phase.run_shop_phase(self.game_state)
+                    except ShopReturnToMainMenuException:
+                        return
+
+            self.final_screen.run_final_screen(self.game_state)
+        except (ReturnToMainMenuException, ShopReturnToMainMenuException):
+            return
 
     def _create_background_hexagon_grid(self) -> dict[tuple[int, int], HexagonTile]:
         """Create a grid of hexagons for the main menu.

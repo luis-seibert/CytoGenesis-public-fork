@@ -5,6 +5,8 @@ and players can sell their harvest for credits. The phase includes rendering the
 state, handling user input, and managing the game loop.
 """
 
+import sys
+
 import pygame
 from pygame.time import Clock
 
@@ -15,6 +17,11 @@ from core_modules.hexagon_grid import HexagonGrid
 from core_modules.process_plotter import ProcessPlotter
 from core_modules.process_tracker import ProcessTracker
 from core_modules.render_manager import RenderManager
+from game_phases.escape_menu import EscapeMenu, EscapeMenuResult
+
+
+class ReturnToMainMenuException(Exception):
+    """Exception raised when the user wants to return to the main menu."""
 
 
 class ColonizationPhase:
@@ -25,9 +32,12 @@ class ColonizationPhase:
         render_manager (RenderManager): The render manager to handle rendering.
     """
 
-    def __init__(self, clock: Clock, render_manager: RenderManager) -> None:
+    def __init__(
+        self, clock: Clock, render_manager: RenderManager, background_hexagon_grid
+    ) -> None:
         self.clock: Clock = clock
         self.render_manager: RenderManager = render_manager
+        self.background_hexagon_grid = background_hexagon_grid
         self.credits_gained: float = 0
         self.selling_initiated: bool = False
         self.selling_completed: bool = False
@@ -38,6 +48,7 @@ class ColonizationPhase:
         self.cached_plot_size: tuple[int, int] | None = None
         self.plot_update_interval: int = 2
         self.frame_count: int = 0
+        self.escape_menu: EscapeMenu | None = None
 
     def run_colonization_phase(
         self,
@@ -58,6 +69,11 @@ class ColonizationPhase:
             hexagon_grid, game_state, self.render_manager.current_screen_size, grid_center_offset
         )
 
+        if self.escape_menu is None:
+            self.escape_menu = EscapeMenu(
+                self.clock, self.render_manager, self.background_hexagon_grid
+            )
+
         self.process_tracker.initialize_with_initial_state(cell_line, hexagon_grid)
 
         self.process_plotter.reset_cache()
@@ -68,6 +84,17 @@ class ColonizationPhase:
 
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
+
+                if event_handler.handle_escape(event):
+                    self.process_tracker.pause()
+                    result = self.escape_menu.show_escape_menu(game_state)
+                    self.process_tracker.resume()
+
+                    if result == EscapeMenuResult.MAIN_MENU:
+                        raise ReturnToMainMenuException()
+                    elif result == EscapeMenuResult.QUIT:
+                        pygame.quit()
+                        sys.exit()
 
             for cell_coordinate, cell in list(
                 cell_line.cells.items()
@@ -101,6 +128,17 @@ class ColonizationPhase:
         while True:
             for event in pygame.event.get():
                 event_handler.handle_quit(event)
+
+                if event_handler.handle_escape(event):
+                    self.process_tracker.pause()
+                    result = self.escape_menu.show_escape_menu(game_state)
+                    self.process_tracker.resume()
+
+                    if result == EscapeMenuResult.MAIN_MENU:
+                        raise ReturnToMainMenuException()
+                    elif result == EscapeMenuResult.QUIT:
+                        pygame.quit()
+                        sys.exit()
 
                 if event_handler.handle_option_selection(event) and not self.selling_initiated:
                     self.selling_initiated = True
